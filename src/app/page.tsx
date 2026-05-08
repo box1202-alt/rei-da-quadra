@@ -1,10 +1,9 @@
-
 "use client";
 
 import React, { useState } from 'react';
 import { CrownBallIcon } from '@/components/crown-ball-icon';
 import { Button } from '@/components/ui/button';
-import { Plus, LayoutGrid, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Plus, LayoutGrid, ArrowRight, ShieldCheck, MapPin } from 'lucide-react';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Card } from '@/components/ui/card';
@@ -34,59 +33,81 @@ export default function PortalReiDaQuadra() {
 
   return (
     <main className="min-h-screen bg-black flex flex-col items-center p-4 md:p-8">
-      {/* Header */}
-      <header className="w-full max-w-5xl flex flex-col items-center mb-12">
-        <div className="flex items-center gap-3 mb-2">
-          <CrownBallIcon className="w-16 h-16 text-orange-500 drop-shadow-[0_0_15px_rgba(255,128,0,0.6)]" />
-          <h1 className="text-5xl md:text-7xl font-black text-orange-500 tracking-tighter italic">REI DA QUADRA</h1>
+      {/* Header Estilizado */}
+      <header className="w-full max-w-3xl flex flex-col items-center mb-16 mt-8">
+        <div className="flex flex-col items-center gap-4 mb-4">
+          <div className="relative">
+            <div className="absolute inset-0 bg-orange-500 blur-2xl opacity-20 rounded-full animate-pulse" />
+            <CrownBallIcon className="w-24 h-24 text-orange-500 drop-shadow-[0_0_20px_rgba(255,128,0,0.8)] relative z-10" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-6xl md:text-8xl font-black text-orange-500 tracking-tighter italic uppercase leading-none">
+              REI DA <br className="md:hidden" /> QUADRA
+            </h1>
+            <p className="text-white text-[10px] md:text-xs tracking-[0.8em] font-light mt-4 opacity-70 uppercase pl-2">
+              PORTAL DE ARENA • PREMIUM SYSTEM
+            </p>
+          </div>
         </div>
-        <p className="text-white text-sm md:text-base tracking-[0.4em] font-light">PORTAL DE ARENA</p>
       </header>
 
-      {/* Actions */}
-      <div className="w-full max-w-5xl flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-          <LayoutGrid className="text-orange-500" /> Nossas Quadras
-        </h2>
+      {/* Seção de Título e Ação */}
+      <div className="w-full max-w-2xl flex justify-between items-end mb-8 px-2 border-b border-zinc-800 pb-4">
+        <div>
+          <h2 className="text-sm font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+            <LayoutGrid className="w-4 h-4 text-orange-500" /> Arenas Disponíveis
+          </h2>
+        </div>
         <Button 
           onClick={() => setIsAddCourtOpen(true)}
-          className="bg-orange-600 hover:bg-orange-700 text-black font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(255,128,0,0.3)]"
+          variant="outline"
+          className="border-orange-500/50 text-orange-500 hover:bg-orange-500 hover:text-black font-bold h-8 text-xs transition-all uppercase italic"
         >
-          <Plus className="w-5 h-5" /> Adicionar Quadra
+          <Plus className="w-4 h-4 mr-1" /> Nova Arena
         </Button>
       </div>
 
-      {/* Court Grid */}
-      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Lista de Quadras Vertical */}
+      <div className="w-full max-w-2xl flex flex-col gap-4">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-48 rounded-xl bg-zinc-900/50 animate-pulse border border-zinc-800" />
+            <div key={i} className="h-32 rounded-xl bg-zinc-900/50 animate-pulse border border-zinc-800" />
           ))
         ) : courts?.length === 0 ? (
-          <div className="col-span-full py-20 flex flex-col items-center justify-center text-zinc-500 border-2 border-dashed border-zinc-900 rounded-2xl">
+          <div className="py-20 flex flex-col items-center justify-center text-zinc-700 border-2 border-dashed border-zinc-900 rounded-2xl">
             <LayoutGrid className="w-12 h-12 mb-4 opacity-10" />
-            <p className="text-lg font-medium">Nenhuma quadra cadastrada.</p>
-            <p className="text-sm">Clique em "Adicionar Quadra" para começar.</p>
+            <p className="text-lg font-medium uppercase italic tracking-tighter">Nenhuma arena ativa.</p>
           </div>
         ) : (
           courts?.map((court) => (
-            <Link key={court.id} href={`/court/${court.id}`}>
-              <Card className="group relative bg-zinc-950 border-zinc-800 p-6 hover:border-orange-500/50 transition-all cursor-pointer overflow-hidden h-full flex flex-col justify-between">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-100 transition-opacity">
-                   <ArrowRight className="w-6 h-6 text-orange-500" />
-                </div>
-                
-                <div>
-                  <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 mb-4">{court.modality}</Badge>
-                  <h3 className="text-2xl font-black text-white group-hover:text-orange-500 transition-colors uppercase italic">{court.name}</h3>
+            <Link key={court.id} href={`/court/${court.id}`} className="block">
+              <Card className="group relative bg-zinc-950 border-zinc-900 p-6 hover:border-orange-500 transition-all cursor-pointer overflow-hidden flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <Badge className="bg-orange-500 text-black border-none font-black text-[9px] w-fit uppercase px-2 mb-2">
+                    {court.modality}
+                  </Badge>
+                  <h3 className="text-3xl font-black text-white group-hover:text-orange-500 transition-colors uppercase italic leading-tight">
+                    {court.name}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Em tempo real</span>
+                  </div>
                 </div>
 
-                <div className="mt-8 flex items-center justify-between text-zinc-500 text-xs font-bold tracking-widest uppercase">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    ATIVA
+                <div className="flex items-center gap-4">
+                  <div className="hidden md:flex flex-col items-end mr-4">
+                    <span className="text-[10px] text-zinc-600 font-bold uppercase">Entrar na</span>
+                    <span className="text-sm font-black text-white uppercase italic">Arena</span>
                   </div>
-                  <span>VER FILA</span>
+                  <div className="w-12 h-12 rounded-full bg-zinc-900 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-black transition-all">
+                    <ArrowRight className="w-6 h-6" />
+                  </div>
+                </div>
+                
+                {/* Efeito Visual de Fundo */}
+                <div className="absolute -right-4 -bottom-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                  <CrownBallIcon className="w-32 h-32" />
                 </div>
               </Card>
             </Link>
@@ -95,8 +116,11 @@ export default function PortalReiDaQuadra() {
       </div>
 
       {/* Footer */}
-      <footer className="mt-auto pt-20 pb-8 text-zinc-600 text-[10px] tracking-widest flex items-center gap-2 uppercase">
-        <ShieldCheck className="w-3 h-3" /> Acesso restrito para administradores
+      <footer className="mt-20 pb-12 flex flex-col items-center gap-4">
+        <div className="flex items-center gap-2 text-zinc-700 text-[10px] tracking-[0.4em] uppercase font-bold">
+          <ShieldCheck className="w-3 h-3" /> Acesso Administrativo
+        </div>
+        <div className="w-1 h-8 bg-gradient-to-b from-orange-500/50 to-transparent" />
       </footer>
 
       <AddCourtDialog 
