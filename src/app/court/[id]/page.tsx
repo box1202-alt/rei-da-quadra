@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { CrownBallIcon } from '@/components/crown-ball-icon';
 import { AddPairDialog } from '@/components/add-pair-dialog';
 import { Button } from '@/components/ui/button';
-import { Plus, Trophy, MoveRight, Layers, ArrowLeft, Loader2 } from 'lucide-react';
+import { Plus, Trophy, MoveRight, Layers, ArrowLeft, Loader2, Trash2 } from 'lucide-react';
 import { PlayerPair, CourtConfig } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -76,7 +76,7 @@ export default function CourtDetails() {
 
     if (newWins >= 2) {
       // REGRA: 2 VITÓRIAS = AMBOS SAEM
-      // O Vencedor vai para o topo da lista (precisa de umjoinedAt menor que o primeiro da fila atual)
+      // O Vencedor vai para o topo da lista (precisa de um joinedAt menor que o primeiro da fila atual)
       let winnerTime = new Date();
       if (waitingList && waitingList.length > 0) {
         const firstInLine = waitingList[0].joinedAt as Timestamp;
@@ -157,6 +157,18 @@ export default function CourtDetails() {
           path: `courts/${id}/queue`,
           operation: 'create',
           requestResourceData: newPair
+        }));
+      });
+  };
+
+  const handleDeletePair = async (pairId: string) => {
+    if (!db || !id || !pairId) return;
+    const pairRef = doc(db, 'courts', id, 'queue', pairId);
+    deleteDoc(pairRef)
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: pairRef.path,
+          operation: 'delete'
         }));
       });
   };
@@ -282,7 +294,7 @@ export default function CourtDetails() {
               </div>
             ) : (
               waitingList.map((pair, index) => (
-                <Card key={pair.id} className="bg-zinc-900/50 border-zinc-800 p-4 hover:border-zinc-700 transition-colors">
+                <Card key={pair.id} className="bg-zinc-900/50 border-zinc-800 p-4 hover:border-zinc-700 transition-colors group relative">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-black font-black text-xs italic">{index + 1}</div>
@@ -291,6 +303,14 @@ export default function CourtDetails() {
                         <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">LISTA DE ESPERA</span>
                       </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-zinc-700 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                      onClick={() => handleDeletePair(pair.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </Card>
               ))
