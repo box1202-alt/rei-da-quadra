@@ -21,19 +21,38 @@ interface AdminDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (name: string, modality: string) => void;
+  initialName?: string;
+  initialModality?: string;
+  title: string;
 }
 
-export function AdminDialog({ isOpen, onClose, onSave }: AdminDialogProps) {
+export function AdminDialog({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  initialName = '', 
+  initialModality = 'Futevôlei',
+  title
+}: AdminDialogProps) {
   const [step, setStep] = useState<'password' | 'form'>('password');
   const [password, setPassword] = useState('');
-  const [courtName, setCourtName] = useState('');
-  const [modality, setModality] = useState('Futevôlei');
+  const [courtName, setCourtName] = useState(initialName);
+  const [modality, setModality] = useState(initialModality);
   const { toast } = useToast();
+
+  // Update internal state when props change (for editing different courts)
+  React.useEffect(() => {
+    if (isOpen) {
+      setCourtName(initialName);
+      setModality(initialModality);
+    }
+  }, [isOpen, initialName, initialModality]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === ADMIN_PASSWORD) {
       setStep('form');
+      setPassword('');
     } else {
       toast({
         title: "Senha Incorreta",
@@ -54,17 +73,20 @@ export function AdminDialog({ isOpen, onClose, onSave }: AdminDialogProps) {
   const reset = () => {
     setStep('password');
     setPassword('');
-    setCourtName('');
-    setModality('Futevôlei');
+  };
+
+  const handleClose = () => {
+    reset();
+    onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-[425px]">
         {step === 'password' ? (
           <form onSubmit={handlePasswordSubmit}>
             <DialogHeader>
-              <DialogTitle className="text-orange-500 font-headline">Acesso Administrador</DialogTitle>
+              <DialogTitle className="text-orange-500 font-headline uppercase italic">{title} - Admin</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="flex flex-col gap-2">
@@ -81,38 +103,38 @@ export function AdminDialog({ isOpen, onClose, onSave }: AdminDialogProps) {
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-black font-bold">Entrar</Button>
+              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-black font-bold w-full uppercase italic">Entrar</Button>
             </DialogFooter>
           </form>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle className="text-orange-500 font-headline">Configurar Quadra</DialogTitle>
+              <DialogTitle className="text-orange-500 font-headline uppercase italic">Configurar Quadra</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="name">Nome da Quadra</Label>
+                <Label htmlFor="name">Nome da Quadra / Arena</Label>
                 <Input
                   id="name"
                   value={courtName}
                   onChange={(e) => setCourtName(e.target.value)}
                   className="bg-zinc-900 border-zinc-800 text-white"
-                  placeholder="Ex: Quadra Central"
+                  placeholder="Ex: Arena Principal"
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="modality">Modalidade</Label>
+                <Label htmlFor="modality">Categoria / Modalidade</Label>
                 <Input
                   id="modality"
                   value={modality}
                   onChange={(e) => setModality(e.target.value)}
                   className="bg-zinc-900 border-zinc-800 text-white"
-                  placeholder="Ex: Futevôlei"
+                  placeholder="Ex: Futevôlei Iniciante"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleSave} className="bg-orange-600 hover:bg-orange-700 text-black font-bold">Salvar Configurações</Button>
+              <Button onClick={handleSave} className="bg-orange-600 hover:bg-orange-700 text-black font-bold w-full uppercase italic">Salvar Configurações</Button>
             </DialogFooter>
           </>
         )}

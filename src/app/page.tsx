@@ -1,24 +1,27 @@
+
 "use client";
 
 import React, { useState } from 'react';
 import { CrownBallIcon } from '@/components/crown-ball-icon';
 import { Button } from '@/components/ui/button';
-import { Plus, LayoutGrid, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Plus, LayoutGrid, ArrowRight, ShieldCheck, Settings } from 'lucide-react';
 import { useCollection, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
-import { AddCourtDialog } from '@/components/add-court-dialog';
+import { useRouter } from 'next/navigation';
+import { AdminDialog } from '@/components/admin-dialog';
 import { CourtConfig } from '@/lib/types';
 
 export default function PortalReiDaQuadra() {
   const db = useFirestore();
+  const router = useRouter();
   const { data: courts, loading } = useCollection<CourtConfig>(
     db ? collection(db, 'courts') : null
   );
   
-  const [isAddCourtOpen, setIsAddCourtOpen] = useState(false);
+  const [adminDialogMode, setAdminDialogMode] = useState<'add' | 'edit' | null>(null);
+  const [selectedCourt, setSelectedCourt] = useState<CourtConfig | null>(null);
 
   const handleAddCourt = (name: string, modality: string) => {
     if (!db) return;
@@ -31,18 +34,25 @@ export default function PortalReiDaQuadra() {
     });
   };
 
+  const handleEditCourt = (name: string, modality: string) => {
+    if (!db || !selectedCourt?.id) return;
+    const courtRef = doc(db, 'courts', selectedCourt.id);
+    updateDoc(courtRef, {
+      name,
+      modality
+    });
+  };
+
   return (
     <main className="min-h-screen bg-black flex flex-col items-center p-4 md:p-8">
-      {/* Header com Logomarca Atualizada e Brilho */}
+      {/* Header com Logomarca e Títulos conforme Imagem */}
       <header className="w-full max-w-4xl flex flex-col items-center mb-16 mt-12">
         <div className="flex flex-col items-center">
-          {/* Logo com Brilho Intenso conforme imagem */}
           <div className="relative mb-8">
             <div className="absolute inset-0 bg-orange-600 blur-[45px] opacity-30 rounded-full" />
             <CrownBallIcon className="w-28 h-28 text-orange-500 relative z-10 drop-shadow-[0_0_15px_rgba(249,115,22,0.7)]" />
           </div>
           
-          {/* Título Itálico e Subtítulo Espaçado */}
           <div className="text-center">
             <h1 className="text-5xl md:text-7xl font-black text-orange-500 tracking-tighter italic uppercase leading-none">
               REI DA QUADRA
@@ -62,7 +72,7 @@ export default function PortalReiDaQuadra() {
           </h2>
         </div>
         <Button 
-          onClick={() => setIsAddCourtOpen(true)}
+          onClick={() => setAdminDialogMode('add')}
           variant="ghost"
           className="text-orange-500 hover:text-orange-400 hover:bg-orange-500/5 font-bold h-8 text-[10px] transition-all uppercase italic tracking-widest"
         >
@@ -83,8 +93,11 @@ export default function PortalReiDaQuadra() {
           </div>
         ) : (
           courts?.map((court) => (
-            <Link key={court.id} href={`/court/${court.id}`} className="block">
-              <Card className="group relative bg-zinc-950 border-zinc-900 p-6 hover:border-orange-500/50 transition-all cursor-pointer overflow-hidden flex items-center justify-between">
+            <div key={court.id} className="relative group">
+              <Card 
+                onClick={() => router.push(`/court/${court.id}`)}
+                className="bg-zinc-950 border-zinc-900 p-6 hover:border-orange-500/50 transition-all cursor-pointer overflow-hidden flex items-center justify-between"
+              >
                 <div className="flex flex-col gap-1">
                   <Badge className="bg-orange-500/10 text-orange-500 border-none font-black text-[9px] w-fit uppercase px-2 mb-2">
                     {court.modality}
@@ -104,12 +117,26 @@ export default function PortalReiDaQuadra() {
                   </div>
                 </div>
                 
-                {/* Efeito Visual de Fundo com a nova Logomarca */}
+                {/* Efeito Visual de Fundo */}
                 <div className="absolute -right-4 -bottom-4 opacity-[0.03] pointer-events-none group-hover:opacity-[0.06] transition-opacity">
                   <CrownBallIcon className="w-32 h-32" />
                 </div>
               </Card>
-            </Link>
+
+              {/* Botão de Edição Admin */}
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedCourt(court);
+                  setAdminDialogMode('edit');
+                }}
+                variant="ghost"
+                size="icon"
+                className="absolute top-4 right-16 w-8 h-8 rounded-full bg-zinc-900/50 border border-zinc-800 text-zinc-500 hover:text-orange-500 hover:bg-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+            </div>
           ))
         )}
       </div>
@@ -120,10 +147,17 @@ export default function PortalReiDaQuadra() {
         </div>
       </footer>
 
-      <AddCourtDialog 
-        isOpen={isAddCourtOpen}
-        onClose={() => setIsAddCourtOpen(false)}
-        onAdd={handleAddCourt}
+      {/* Diálogo Unificado de Admin */}
+      <AdminDialog 
+        isOpen={adminDialogMode !== null}
+        onClose={() => {
+          setAdminDialogMode(null);
+          setSelectedCourt(null);
+        }}
+        onSave={adminDialogMode === 'add' ? handleAddCourt : handleEditCourt}
+        initialName={selectedCourt?.name}
+        initialModality={selectedCourt?.modality}
+        title={adminDialogMode === 'add' ? 'Nova Quadra' : 'Editar Quadra'}
       />
     </main>
   );
