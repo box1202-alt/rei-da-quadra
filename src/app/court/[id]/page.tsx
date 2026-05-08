@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { CrownBallIcon } from '@/components/crown-ball-icon';
 import { AddPairDialog } from '@/components/add-pair-dialog';
@@ -17,53 +17,55 @@ import { doc, updateDoc, collection, addDoc, deleteDoc, serverTimestamp, query, 
 
 export default function CourtDetails() {
   const params = useParams();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const rawId = params?.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+  
   const router = useRouter();
   const db = useFirestore();
   
-  const courtRef = db ? doc(db, 'courts', id) : null;
+  // Memoização das referências para estabilidade
+  const courtRef = useMemo(() => (db && id ? doc(db, 'courts', id) : null), [db, id]);
+  const queueRef = useMemo(() => (db && id ? collection(db, 'courts', id, 'queue') : null), [db, id]);
+  const queueQuery = useMemo(() => (queueRef ? query(queueRef, orderBy('joinedAt', 'asc')) : null), [queueRef]);
+
   const { data: court, loading: loadingCourt } = useDoc<CourtConfig>(courtRef);
-  
-  const queueRef = db ? collection(db, 'courts', id, 'queue') : null;
-  const { data: waitingList } = useCollection<PlayerPair>(
-    queueRef ? query(queueRef, orderBy('joinedAt', 'asc')) : null
-  );
+  const { data: waitingList, loading: loadingQueue } = useCollection<PlayerPair>(queueQuery);
 
   const [isAddPairOpen, setIsAddPairOpen] = useState(false);
 
   // Lógica automática para preencher a quadra a partir da fila
   useEffect(() => {
-    if (!court || !waitingList || waitingList.length === 0 || !courtRef || !db) return;
+    if (!court || !waitingList || waitingList.length === 0 || !courtRef || !db || !id) return;
+
+    // Se um lado estiver vazio, puxa o primeiro da fila
+    const fillSide = async (side: 'activeLeft' | 'activeRight', pair: PlayerPair) => {
+      const pairId = pair.id;
+      if (!pairId) return;
+
+      const updateData = { [side]: { ...pair } };
+      
+      updateDoc(courtRef, updateData)
+        .catch(async () => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: courtRef.path,
+            operation: 'update',
+            requestResourceData: updateData
+          }));
+        });
+
+      // Remove da fila após mover para a quadra
+      deleteDoc(doc(db, 'courts', id, 'queue', pairId));
+    };
 
     if (!court.activeLeft) {
-      const next = waitingList[0];
-      const nextId = next.id;
-      updateDoc(courtRef, { activeLeft: next })
-        .catch(async () => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: courtRef.path,
-            operation: 'update',
-            requestResourceData: { activeLeft: next }
-          }));
-        });
-      deleteDoc(doc(db, 'courts', id, 'queue', nextId));
+      fillSide('activeLeft', waitingList[0]);
     } else if (!court.activeRight) {
-      const next = waitingList[0];
-      const nextId = next.id;
-      updateDoc(courtRef, { activeRight: next })
-        .catch(async () => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: courtRef.path,
-            operation: 'update',
-            requestResourceData: { activeRight: next }
-          }));
-        });
-      deleteDoc(doc(db, 'courts', id, 'queue', nextId));
+      fillSide('activeRight', waitingList[0]);
     }
   }, [court, waitingList, courtRef, db, id]);
 
   const handleWin = async (side: 'left' | 'right') => {
-    if (!court || !courtRef || !db) return;
+    if (!court || !courtRef || !db || !id) return;
 
     const winner = side === 'left' ? court.activeLeft : court.activeRight;
     const loser = side === 'left' ? court.activeRight : court.activeLeft;
@@ -74,6 +76,7 @@ export default function CourtDetails() {
 
     if (newWins >= 2) {
       // REGRA: 2 VITÓRIAS = AMBOS SAEM
+      // O Vencedor vai para o topo da lista (precisa de umjoinedAt menor que o primeiro da fila atual)
       let winnerTime = new Date();
       if (waitingList && waitingList.length > 0) {
         const firstInLine = waitingList[0].joinedAt as Timestamp;
@@ -141,7 +144,7 @@ export default function CourtDetails() {
   };
 
   const addPair = (p1: string, p2: string) => {
-    if (!db) return;
+    if (!db || !id) return;
     const newPair = {
       player1: p1.toUpperCase(),
       player2: p2.toUpperCase(),
@@ -158,7 +161,7 @@ export default function CourtDetails() {
       });
   };
 
-  if (loadingCourt) {
+  if (loadingCourt || !id) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
