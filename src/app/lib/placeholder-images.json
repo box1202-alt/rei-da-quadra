@@ -1,0 +1,11 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "app-icon",
+      "description": "Footvolley ball with a crown",
+      "imageUrl": "https://picsum.photos/seed/footvolley-crown/200/200",
+      "imageHint": "footvolley crown"
+    }
+  ]
+}
