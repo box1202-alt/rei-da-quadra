@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -162,6 +161,9 @@ export default function PortalReiDaQuadra() {
       <footer className="mt-20 pb-12 flex flex-col items-center gap-4">
         <div className="flex items-center gap-2 text-zinc-800 text-[9px] tracking-[0.5em] uppercase font-black">
           <ShieldCheck className="w-3 h-3" /> SISTEMA ADMINISTRATIVO
+        </div>
+        <div className="text-zinc-700 text-[8px] font-black uppercase tracking-[0.2em] mt-2 opacity-50">
+          Developed by: Leandro Borges
         </div>
       </footer>
 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -322,6 +321,12 @@ export default function CourtDetails() {
           </div>
         </section>
       </div>
+
+      <footer className="mt-auto pt-12 pb-8 flex flex-col items-center opacity-50">
+        <div className="text-zinc-700 text-[8px] font-black uppercase tracking-[0.2em]">
+          Developed by: Leandro Borges
+        </div>
+      </footer>
 
       <AddPairDialog isOpen={isAddPairOpen} onClose={() => setIsAddPairOpen(false)} onAdd={addPair} />
     </main>
