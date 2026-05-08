@@ -79,6 +79,10 @@ export default function PortalReiDaQuadra() {
         title: "SISTEMA RESETADO",
         description: "TODAS AS QUADRAS E DADOS FORAM APAGADOS.",
       });
+      // Executa recarregamento automático da página
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (e) {
       toast({
         title: "ERRO AO RESETAR",
@@ -197,8 +201,8 @@ export default function PortalReiDaQuadra() {
         <div className="flex items-center gap-2 text-zinc-900 text-[9px] tracking-[0.5em] uppercase font-black mt-2">
           <ShieldCheck className="w-3 h-3" /> SISTEMA ADMINISTRATIVO
         </div>
-        <div className="text-zinc-700 text-[8px] font-black uppercase tracking-[0.2em] mt-4 opacity-50">
-          Developed by: Leandro Borges
+        <div className="text-zinc-700 text-[8px] font-black uppercase tracking-widest mt-4 opacity-50">
+          DEVELOPED BY: LEANDRO BORGES
         </div>
       </footer>
 
