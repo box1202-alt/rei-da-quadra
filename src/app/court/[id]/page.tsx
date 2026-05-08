@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -27,7 +28,7 @@ export default function CourtDetails() {
 
   const [isAddPairOpen, setIsAddPairOpen] = useState(false);
 
-  // Logic to fill court from queue automatically if slots are empty
+  // Lógica automática para preencher a quadra a partir da fila
   useEffect(() => {
     if (!court || !waitingList || waitingList.length === 0 || !courtRef || !db) return;
 
@@ -53,17 +54,16 @@ export default function CourtDetails() {
     const newWins = (winner.consecutiveWins || 0) + 1;
 
     if (newWins >= 2) {
-      // REGRA: 2 vitórias = AMBOS SAEM
-      // Vencedor vai para o topo da lista de espera (Posição #1 após a entrada dos próximos)
+      // REGRA: 2 VITÓRIAS = AMBOS SAEM
+      // VENCEDOR VAI PARA A POSIÇÃO #1 DA FILA (MAIS ANTIGO QUE O PRÓXIMO DA FILA)
       
-      let winnerTime;
-      if (waitingList && waitingList.length >= 2) {
-        // Se houver pelo menos 2 duplas na fila, elas vão entrar.
-        // O vencedor deve ser o primeiro da "nova" fila
-        const refTime = waitingList[1].joinedAt as Timestamp;
-        winnerTime = new Date(refTime.toMillis() + 10); 
-      } else {
-        winnerTime = new Date();
+      let winnerTime = new Date();
+      if (waitingList && waitingList.length > 0) {
+        // Para ser o #1, o timestamp deve ser menor que o do atual primeiro da fila
+        const firstInLine = waitingList[0].joinedAt as Timestamp;
+        if (firstInLine) {
+          winnerTime = new Date(firstInLine.toMillis() - 1000); 
+        }
       }
 
       const resetWinner = { 
@@ -77,7 +77,7 @@ export default function CourtDetails() {
         player1: loser.player1, 
         player2: loser.player2, 
         consecutiveWins: 0, 
-        joinedAt: serverTimestamp() 
+        joinedAt: serverTimestamp() // VAI PARA O FINAL DA FILA
       };
       
       addDoc(collection(db, 'courts', id as string, 'queue'), resetWinner);
@@ -85,6 +85,7 @@ export default function CourtDetails() {
       
       updateDoc(courtRef, { activeLeft: null, activeRight: null });
     } else {
+      // REGRA: CONTINUA NA QUADRA, PERDEDOR SAI
       const resetLoser = { 
         player1: loser.player1, 
         player2: loser.player2, 
@@ -105,8 +106,8 @@ export default function CourtDetails() {
   const addPair = (p1: string, p2: string) => {
     if (!db) return;
     addDoc(collection(db, 'courts', id as string, 'queue'), {
-      player1: p1,
-      player2: p2,
+      player1: p1.toUpperCase(),
+      player2: p2.toUpperCase(),
       consecutiveWins: 0,
       joinedAt: serverTimestamp()
     });
@@ -122,8 +123,8 @@ export default function CourtDetails() {
 
   if (!court) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white">
-        <h1 className="text-2xl font-bold mb-4 uppercase">QUADRA NÃO ENCONTRADA</h1>
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-4">
+        <h1 className="text-2xl font-black mb-4 uppercase italic">QUADRA NÃO ENCONTRADA</h1>
         <Button onClick={() => router.push('/')} variant="outline" className="border-orange-500 text-orange-500 uppercase font-black italic">VOLTAR AO PORTAL</Button>
       </div>
     );
@@ -135,7 +136,7 @@ export default function CourtDetails() {
       <header className="w-full max-w-5xl flex flex-col items-center mb-8 relative">
         <Button 
           variant="ghost" 
-          className="absolute left-0 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white font-bold uppercase italic text-xs tracking-widest"
+          className="absolute left-0 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white font-black uppercase italic text-xs tracking-widest"
           onClick={() => router.push('/')}
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> <span className="hidden md:inline">PORTAL</span>
@@ -149,7 +150,7 @@ export default function CourtDetails() {
       {/* Main Info */}
       <div className="w-full max-w-5xl flex justify-between items-end mb-6">
         <div>
-          <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 uppercase text-[10px] mb-2 font-black">{court.modality.toUpperCase()}</Badge>
+          <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 uppercase text-[10px] mb-2 font-black tracking-widest">{court.modality.toUpperCase()}</Badge>
           <h2 className="text-3xl font-black text-white italic uppercase leading-none">{court.name.toUpperCase()}</h2>
         </div>
         <Button 
@@ -228,7 +229,7 @@ export default function CourtDetails() {
             <h3 className="text-orange-500 font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-2">
               <Layers className="w-3 h-3" /> PRÓXIMAS DUPLAS
             </h3>
-            <Badge className="bg-zinc-900 text-zinc-500 border-zinc-800 font-bold uppercase text-[9px]">{waitingList?.length || 0} NA FILA</Badge>
+            <Badge className="bg-zinc-900 text-zinc-500 border-zinc-800 font-black uppercase text-[9px]">{waitingList?.length || 0} NA FILA</Badge>
           </div>
 
           <div className="bg-zinc-950 border border-zinc-900 rounded-2xl overflow-hidden h-[500px] flex flex-col p-3 space-y-3 overflow-y-auto">

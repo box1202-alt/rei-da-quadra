@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -25,8 +26,8 @@ export default function PortalReiDaQuadra() {
   const handleAddCourt = (name: string, modality: string) => {
     if (!db) return;
     addDoc(collection(db, 'courts'), {
-      name,
-      modality,
+      name: name.toUpperCase(),
+      modality: modality.toUpperCase(),
       createdAt: serverTimestamp(),
       activeLeft: null,
       activeRight: null
@@ -37,8 +38,8 @@ export default function PortalReiDaQuadra() {
     if (!db || !selectedCourt?.id) return;
     const courtRef = doc(db, 'courts', selectedCourt.id);
     updateDoc(courtRef, {
-      name,
-      modality
+      name: name.toUpperCase(),
+      modality: modality.toUpperCase()
     });
   };
 
@@ -56,7 +57,7 @@ export default function PortalReiDaQuadra() {
             <h1 className="text-5xl md:text-7xl font-black text-orange-500 tracking-tighter italic uppercase leading-none">
               REI DA QUADRA
             </h1>
-            <p className="text-zinc-500 text-[10px] md:text-xs tracking-[0.6em] font-bold mt-4 uppercase">
+            <p className="text-zinc-500 text-[10px] md:text-xs tracking-[0.6em] font-black mt-4 uppercase">
               BEACH SPORTS PORTAL
             </p>
           </div>
@@ -73,7 +74,7 @@ export default function PortalReiDaQuadra() {
         <Button 
           onClick={() => setAdminDialogMode('add')}
           variant="ghost"
-          className="text-orange-500 hover:text-orange-400 hover:bg-orange-500/5 font-bold h-8 text-[10px] transition-all uppercase italic tracking-widest"
+          className="text-orange-500 hover:text-orange-400 hover:bg-orange-500/5 font-black h-8 text-[10px] transition-all uppercase italic tracking-widest"
         >
           <Plus className="w-4 h-4 mr-1" /> NOVA QUADRA
         </Button>
@@ -98,15 +99,15 @@ export default function PortalReiDaQuadra() {
                 className="bg-zinc-950 border-zinc-900 p-6 hover:border-orange-500/50 transition-all cursor-pointer overflow-hidden flex items-center justify-between"
               >
                 <div className="flex flex-col gap-1">
-                  <Badge className="bg-orange-500/10 text-orange-500 border-none font-black text-[9px] w-fit uppercase px-2 mb-2">
+                  <Badge className="bg-orange-500/10 text-orange-500 border-none font-black text-[9px] w-fit uppercase px-2 mb-2 tracking-widest">
                     {court.modality.toUpperCase()}
                   </Badge>
                   <h3 className="text-3xl font-black text-white group-hover:text-orange-500 transition-colors uppercase italic leading-tight">
                     {court.name.toUpperCase()}
                   </h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">LIVE ARENA</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">ARENA ATIVA</span>
                   </div>
                 </div>
 
@@ -141,8 +142,8 @@ export default function PortalReiDaQuadra() {
       </div>
 
       <footer className="mt-20 pb-12 flex flex-col items-center gap-4">
-        <div className="flex items-center gap-2 text-zinc-800 text-[9px] tracking-[0.5em] uppercase font-bold">
-          <ShieldCheck className="w-3 h-3" /> SYSTEM ADMIN
+        <div className="flex items-center gap-2 text-zinc-800 text-[9px] tracking-[0.5em] uppercase font-black">
+          <ShieldCheck className="w-3 h-3" /> SISTEMA ADMINISTRATIVO
         </div>
       </footer>
 
