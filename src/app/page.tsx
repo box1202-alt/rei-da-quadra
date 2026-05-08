@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -33,28 +34,28 @@ export default function PortalReiDaQuadra() {
 
   return (
     <main className="min-h-screen bg-black flex flex-col items-center p-4 md:p-8">
-      {/* Header Estilizado conforme imagem */}
+      {/* Header com Logomarca Atualizada e Brilho */}
       <header className="w-full max-w-4xl flex flex-col items-center mb-16 mt-12">
         <div className="flex flex-col items-center">
-          {/* Logo com Brilho */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 bg-orange-600 blur-[40px] opacity-40 rounded-full" />
-            <CrownBallIcon className="w-24 h-24 text-orange-500 relative z-10 drop-shadow-[0_0_15px_rgba(249,115,22,0.6)]" />
+          {/* Logo com Brilho Intenso conforme imagem */}
+          <div className="relative mb-8">
+            <div className="absolute inset-0 bg-orange-600 blur-[45px] opacity-30 rounded-full" />
+            <CrownBallIcon className="w-28 h-28 text-orange-500 relative z-10 drop-shadow-[0_0_15px_rgba(249,115,22,0.7)]" />
           </div>
           
-          {/* Título e Subtítulo */}
+          {/* Título Itálico e Subtítulo Espaçado */}
           <div className="text-center">
             <h1 className="text-5xl md:text-7xl font-black text-orange-500 tracking-tighter italic uppercase leading-none">
               REI DA QUADRA
             </h1>
-            <p className="text-zinc-400 text-[11px] md:text-sm tracking-[0.5em] font-bold mt-4 uppercase">
+            <p className="text-zinc-500 text-[10px] md:text-xs tracking-[0.6em] font-bold mt-4 uppercase">
               BEACH SPORTS PORTAL
             </p>
           </div>
         </div>
       </header>
 
-      {/* Seção de Título e Ação */}
+      {/* Seção de Arenas */}
       <div className="w-full max-w-2xl flex justify-between items-end mb-8 px-2 border-b border-zinc-900 pb-4">
         <div>
           <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -104,8 +105,8 @@ export default function PortalReiDaQuadra() {
                   </div>
                 </div>
                 
-                {/* Efeito Visual de Fundo */}
-                <div className="absolute -right-4 -bottom-4 opacity-[0.02] pointer-events-none group-hover:opacity-[0.05] transition-opacity">
+                {/* Efeito Visual de Fundo com a nova Logomarca */}
+                <div className="absolute -right-4 -bottom-4 opacity-[0.03] pointer-events-none group-hover:opacity-[0.06] transition-opacity">
                   <CrownBallIcon className="w-32 h-32" />
                 </div>
               </Card>
@@ -114,7 +115,6 @@ export default function PortalReiDaQuadra() {
         )}
       </div>
 
-      {/* Footer */}
       <footer className="mt-20 pb-12 flex flex-col items-center gap-4">
         <div className="flex items-center gap-2 text-zinc-800 text-[9px] tracking-[0.5em] uppercase font-bold">
           <ShieldCheck className="w-3 h-3" /> System Admin
