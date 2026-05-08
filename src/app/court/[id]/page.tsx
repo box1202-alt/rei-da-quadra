@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -31,6 +32,7 @@ export default function CourtDetails() {
 
   const [isAddPairOpen, setIsAddPairOpen] = useState(false);
 
+  // Auto-preenchimento das quadras quando houver vaga
   useEffect(() => {
     if (!court || !waitingList || waitingList.length === 0 || !courtRef || !db || !id) return;
 
@@ -69,14 +71,19 @@ export default function CourtDetails() {
 
     const newWins = (winner.consecutiveWins || 0) + 1;
 
+    // REGRA DAS 2 VITÓRIAS CONSECUTIVAS
     if (newWins >= 2) {
+      // 1. Ambas as duplas saem da quadra
+      // 2. As duas próximas da fila entram
       const next1 = waitingList && waitingList.length > 0 ? waitingList[0] : null;
       const next2 = waitingList && waitingList.length > 1 ? waitingList[1] : null;
 
+      // Cálculo para colocar o vencedor na Posição #1 (antes do atual primeiro da fila restante)
       let winnerTime = new Date();
       if (waitingList && waitingList.length > 2) {
         const thirdInLine = waitingList[2].joinedAt as Timestamp;
         if (thirdInLine) {
+          // Define o tempo como 1 segundo antes do que será o novo #1
           winnerTime = new Date(thirdInLine.toMillis() - 1000); 
         }
       }
@@ -95,14 +102,17 @@ export default function CourtDetails() {
         joinedAt: serverTimestamp() 
       };
 
+      // Atualiza quadra com novos jogadores ou vazio
       updateDoc(courtRef, { 
         activeLeft: next1 ? { ...next1, consecutiveWins: 0 } : null, 
         activeRight: next2 ? { ...next2, consecutiveWins: 0 } : null 
       });
 
+      // Remove da fila quem entrou
       if (next1?.id) deleteDoc(doc(db, 'courts', id, 'queue', next1.id));
       if (next2?.id) deleteDoc(doc(db, 'courts', id, 'queue', next2.id));
 
+      // Re-insere as duplas que saíram na fila
       addDoc(collection(db, 'courts', id, 'queue'), resetWinner)
         .catch(async () => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -121,6 +131,7 @@ export default function CourtDetails() {
           }));
         });
     } else {
+      // Regra normal: Vencedor fica, perdedor sai
       const resetLoser = { 
         player1: loser.player1.toUpperCase(), 
         player2: loser.player2.toUpperCase(), 
