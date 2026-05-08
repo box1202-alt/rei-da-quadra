@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -68,7 +67,7 @@ export default function PortalReiDaQuadra() {
       <div className="w-full max-w-2xl flex justify-between items-end mb-8 px-2 border-b border-zinc-900 pb-4">
         <div>
           <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] flex items-center gap-2">
-            <LayoutGrid className="w-3 h-3 text-orange-500" /> Quadras Disponíveis
+            <LayoutGrid className="w-3 h-3 text-orange-500" /> QUADRAS DISPONÍVEIS
           </h2>
         </div>
         <Button 
@@ -76,7 +75,7 @@ export default function PortalReiDaQuadra() {
           variant="ghost"
           className="text-orange-500 hover:text-orange-400 hover:bg-orange-500/5 font-bold h-8 text-[10px] transition-all uppercase italic tracking-widest"
         >
-          <Plus className="w-4 h-4 mr-1" /> Nova Quadra
+          <Plus className="w-4 h-4 mr-1" /> NOVA QUADRA
         </Button>
       </div>
 
@@ -89,7 +88,7 @@ export default function PortalReiDaQuadra() {
         ) : courts?.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center text-zinc-800 border-2 border-dashed border-zinc-900 rounded-2xl">
             <LayoutGrid className="w-12 h-12 mb-4 opacity-20" />
-            <p className="text-sm font-medium uppercase italic tracking-widest opacity-50">Nenhuma quadra ativa.</p>
+            <p className="text-sm font-black uppercase italic tracking-widest opacity-50">NENHUMA QUADRA ATIVA.</p>
           </div>
         ) : (
           courts?.map((court) => (
@@ -100,14 +99,14 @@ export default function PortalReiDaQuadra() {
               >
                 <div className="flex flex-col gap-1">
                   <Badge className="bg-orange-500/10 text-orange-500 border-none font-black text-[9px] w-fit uppercase px-2 mb-2">
-                    {court.modality}
+                    {court.modality.toUpperCase()}
                   </Badge>
                   <h3 className="text-3xl font-black text-white group-hover:text-orange-500 transition-colors uppercase italic leading-tight">
-                    {court.name}
+                    {court.name.toUpperCase()}
                   </h3>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Live Arena</span>
+                    <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">LIVE ARENA</span>
                   </div>
                 </div>
 
@@ -143,7 +142,7 @@ export default function PortalReiDaQuadra() {
 
       <footer className="mt-20 pb-12 flex flex-col items-center gap-4">
         <div className="flex items-center gap-2 text-zinc-800 text-[9px] tracking-[0.5em] uppercase font-bold">
-          <ShieldCheck className="w-3 h-3" /> System Admin
+          <ShieldCheck className="w-3 h-3" /> SYSTEM ADMIN
         </div>
       </footer>
 
@@ -157,7 +156,7 @@ export default function PortalReiDaQuadra() {
         onSave={adminDialogMode === 'add' ? handleAddCourt : handleEditCourt}
         initialName={selectedCourt?.name}
         initialModality={selectedCourt?.modality}
-        title={adminDialogMode === 'add' ? 'Nova Quadra' : 'Editar Quadra'}
+        title={adminDialogMode === 'add' ? 'NOVA QUADRA' : 'EDITAR QUADRA'}
       />
     </main>
   );

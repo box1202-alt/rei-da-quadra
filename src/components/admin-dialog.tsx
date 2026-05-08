@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -55,8 +54,8 @@ export function AdminDialog({
       setPassword('');
     } else {
       toast({
-        title: "Senha Incorreta",
-        description: "A senha de administrador está errada.",
+        title: "SENHA INCORRETA",
+        description: "A SENHA DE ADMINISTRADOR ESTÁ ERRADA.",
         variant: "destructive",
       });
       setPassword('');
@@ -86,55 +85,55 @@ export function AdminDialog({
         {step === 'password' ? (
           <form onSubmit={handlePasswordSubmit}>
             <DialogHeader>
-              <DialogTitle className="text-orange-500 font-headline uppercase italic">{title} - Admin</DialogTitle>
+              <DialogTitle className="text-orange-500 font-headline uppercase italic">{title.toUpperCase()} - ADMIN</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="password">Senha Numérica</Label>
+                <Label htmlFor="password" className="uppercase font-bold">SENHA NUMÉRICA</Label>
                 <Input
                   id="password"
                   type="password"
                   inputMode="numeric"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-zinc-900 border-zinc-800 text-white"
-                  placeholder="Digite a senha..."
+                  className="bg-zinc-900 border-zinc-800 text-white uppercase"
+                  placeholder="DIGITE A SENHA..."
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-black font-bold w-full uppercase italic">Entrar</Button>
+              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-black font-bold w-full uppercase italic">ENTRAR</Button>
             </DialogFooter>
           </form>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle className="text-orange-500 font-headline uppercase italic">Configurar Quadra</DialogTitle>
+              <DialogTitle className="text-orange-500 font-headline uppercase italic">CONFIGURAR QUADRA</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="name">Nome da Quadra / Arena</Label>
+                <Label htmlFor="name" className="uppercase font-bold">NOME DA QUADRA / ARENA</Label>
                 <Input
                   id="name"
                   value={courtName}
                   onChange={(e) => setCourtName(e.target.value)}
-                  className="bg-zinc-900 border-zinc-800 text-white"
-                  placeholder="Ex: Arena Principal"
+                  className="bg-zinc-900 border-zinc-800 text-white uppercase"
+                  placeholder="EX: ARENA PRINCIPAL"
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="modality">Categoria / Modalidade</Label>
+                <Label htmlFor="modality" className="uppercase font-bold">CATEGORIA / MODALIDADE</Label>
                 <Input
                   id="modality"
                   value={modality}
                   onChange={(e) => setModality(e.target.value)}
-                  className="bg-zinc-900 border-zinc-800 text-white"
-                  placeholder="Ex: Futevôlei Iniciante"
+                  className="bg-zinc-900 border-zinc-800 text-white uppercase"
+                  placeholder="EX: FUTEVÔLEI INICIANTE"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleSave} className="bg-orange-600 hover:bg-orange-700 text-black font-bold w-full uppercase italic">Salvar Configurações</Button>
+              <Button onClick={handleSave} className="bg-orange-600 hover:bg-orange-700 text-black font-bold w-full uppercase italic">SALVAR CONFIGURAÇÕES</Button>
             </DialogFooter>
           </>
         )}
