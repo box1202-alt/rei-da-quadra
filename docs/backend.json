@@ -1,0 +1,45 @@
+
+{
+  "entities": {
+    "Court": {
+      "title": "Court",
+      "description": "Uma quadra de esporte de areia.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "modality": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "activeLeft": { "$ref": "#/backend/entities/PlayerPair" },
+        "activeRight": { "$ref": "#/backend/entities/PlayerPair" }
+      },
+      "required": ["name", "modality"]
+    },
+    "PlayerPair": {
+      "title": "PlayerPair",
+      "description": "Uma dupla de jogadores.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "player1": { "type": "string" },
+        "player2": { "type": "string" },
+        "consecutiveWins": { "type": "number" },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["player1", "player2"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/courts/{courtId}": {
+      "schema": "Court",
+      "description": "Documento da quadra com estado atual dos jogadores em campo."
+    },
+    "/courts/{courtId}/queue/{pairId}": {
+      "schema": "PlayerPair",
+      "description": "Fila de espera de duplas para uma quadra específica."
+    }
+  }
+}
