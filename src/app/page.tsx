@@ -6,6 +6,8 @@ import { CrownBallIcon } from '@/components/crown-ball-icon';
 import { Button } from '@/components/ui/button';
 import { Plus, LayoutGrid, ArrowRight, ShieldCheck, Settings } from 'lucide-react';
 import { useCollection, useFirestore } from '@/firebase';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,27 +27,42 @@ export default function PortalReiDaQuadra() {
 
   const handleAddCourt = (name: string, modality: string) => {
     if (!db) return;
-    addDoc(collection(db, 'courts'), {
+    const newCourt = {
       name: name.toUpperCase(),
       modality: modality.toUpperCase(),
       createdAt: serverTimestamp(),
       activeLeft: null,
       activeRight: null
-    });
+    };
+    addDoc(collection(db, 'courts'), newCourt)
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'courts',
+          operation: 'create',
+          requestResourceData: newCourt
+        }));
+      });
   };
 
   const handleEditCourt = (name: string, modality: string) => {
     if (!db || !selectedCourt?.id) return;
     const courtRef = doc(db, 'courts', selectedCourt.id);
-    updateDoc(courtRef, {
+    const updatedData = {
       name: name.toUpperCase(),
       modality: modality.toUpperCase()
-    });
+    };
+    updateDoc(courtRef, updatedData)
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: courtRef.path,
+          operation: 'update',
+          requestResourceData: updatedData
+        }));
+      });
   };
 
   return (
     <main className="min-h-screen bg-black flex flex-col items-center p-4 md:p-8">
-      {/* Header com Logomarca e Títulos conforme Imagem */}
       <header className="w-full max-w-4xl flex flex-col items-center mb-16 mt-12">
         <div className="flex flex-col items-center">
           <div className="relative mb-8">
@@ -64,7 +81,6 @@ export default function PortalReiDaQuadra() {
         </div>
       </header>
 
-      {/* Seção de Quadras */}
       <div className="w-full max-w-2xl flex justify-between items-end mb-8 px-2 border-b border-zinc-900 pb-4">
         <div>
           <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -80,7 +96,6 @@ export default function PortalReiDaQuadra() {
         </Button>
       </div>
 
-      {/* Lista de Quadras Vertical */}
       <div className="w-full max-w-2xl flex flex-col gap-4">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
@@ -100,10 +115,10 @@ export default function PortalReiDaQuadra() {
               >
                 <div className="flex flex-col gap-1">
                   <Badge className="bg-orange-500/10 text-orange-500 border-none font-black text-[9px] w-fit uppercase px-2 mb-2 tracking-widest">
-                    {court.modality.toUpperCase()}
+                    {court.modality?.toUpperCase()}
                   </Badge>
                   <h3 className="text-3xl font-black text-white group-hover:text-orange-500 transition-colors uppercase italic leading-tight">
-                    {court.name.toUpperCase()}
+                    {court.name?.toUpperCase()}
                   </h3>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -117,13 +132,11 @@ export default function PortalReiDaQuadra() {
                   </div>
                 </div>
                 
-                {/* Efeito Visual de Fundo */}
                 <div className="absolute -right-4 -bottom-4 opacity-[0.03] pointer-events-none group-hover:opacity-[0.06] transition-opacity">
                   <CrownBallIcon className="w-32 h-32" />
                 </div>
               </Card>
 
-              {/* Botão de Edição Admin */}
               <Button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -147,7 +160,6 @@ export default function PortalReiDaQuadra() {
         </div>
       </footer>
 
-      {/* Diálogo Unificado de Admin */}
       <AdminDialog 
         isOpen={adminDialogMode !== null}
         onClose={() => {

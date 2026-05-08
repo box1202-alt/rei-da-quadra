@@ -11,17 +11,20 @@ import { PlayerPair, CourtConfig } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { useDoc, useCollection, useFirestore } from '@/firebase';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { doc, updateDoc, collection, addDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp } from 'firebase/firestore';
 
 export default function CourtDetails() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const router = useRouter();
   const db = useFirestore();
   
-  const courtRef = db ? doc(db, 'courts', id as string) : null;
+  const courtRef = db ? doc(db, 'courts', id) : null;
   const { data: court, loading: loadingCourt } = useDoc<CourtConfig>(courtRef);
   
-  const queueRef = db ? collection(db, 'courts', id as string, 'queue') : null;
+  const queueRef = db ? collection(db, 'courts', id, 'queue') : null;
   const { data: waitingList } = useCollection<PlayerPair>(
     queueRef ? query(queueRef, orderBy('joinedAt', 'asc')) : null
   );
@@ -34,12 +37,28 @@ export default function CourtDetails() {
 
     if (!court.activeLeft) {
       const next = waitingList[0];
-      updateDoc(courtRef, { activeLeft: next });
-      deleteDoc(doc(db, 'courts', id as string, 'queue', next.id));
+      const nextId = next.id;
+      updateDoc(courtRef, { activeLeft: next })
+        .catch(async () => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: courtRef.path,
+            operation: 'update',
+            requestResourceData: { activeLeft: next }
+          }));
+        });
+      deleteDoc(doc(db, 'courts', id, 'queue', nextId));
     } else if (!court.activeRight) {
       const next = waitingList[0];
-      updateDoc(courtRef, { activeRight: next });
-      deleteDoc(doc(db, 'courts', id as string, 'queue', next.id));
+      const nextId = next.id;
+      updateDoc(courtRef, { activeRight: next })
+        .catch(async () => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: courtRef.path,
+            operation: 'update',
+            requestResourceData: { activeRight: next }
+          }));
+        });
+      deleteDoc(doc(db, 'courts', id, 'queue', nextId));
     }
   }, [court, waitingList, courtRef, db, id]);
 
@@ -55,11 +74,8 @@ export default function CourtDetails() {
 
     if (newWins >= 2) {
       // REGRA: 2 VITÓRIAS = AMBOS SAEM
-      // VENCEDOR VAI PARA A POSIÇÃO #1 DA FILA (MAIS ANTIGO QUE O PRÓXIMO DA FILA)
-      
       let winnerTime = new Date();
       if (waitingList && waitingList.length > 0) {
-        // Para ser o #1, o timestamp deve ser menor que o do atual primeiro da fila
         const firstInLine = waitingList[0].joinedAt as Timestamp;
         if (firstInLine) {
           winnerTime = new Date(firstInLine.toMillis() - 1000); 
@@ -67,32 +83,53 @@ export default function CourtDetails() {
       }
 
       const resetWinner = { 
-        player1: winner.player1, 
-        player2: winner.player2, 
+        player1: winner.player1.toUpperCase(), 
+        player2: winner.player2.toUpperCase(), 
         consecutiveWins: 0, 
         joinedAt: winnerTime 
       };
       
       const resetLoser = { 
-        player1: loser.player1, 
-        player2: loser.player2, 
-        consecutiveWins: 0, 
-        joinedAt: serverTimestamp() // VAI PARA O FINAL DA FILA
-      };
-      
-      addDoc(collection(db, 'courts', id as string, 'queue'), resetWinner);
-      addDoc(collection(db, 'courts', id as string, 'queue'), resetLoser);
-      
-      updateDoc(courtRef, { activeLeft: null, activeRight: null });
-    } else {
-      // REGRA: CONTINUA NA QUADRA, PERDEDOR SAI
-      const resetLoser = { 
-        player1: loser.player1, 
-        player2: loser.player2, 
+        player1: loser.player1.toUpperCase(), 
+        player2: loser.player2.toUpperCase(), 
         consecutiveWins: 0, 
         joinedAt: serverTimestamp() 
       };
-      addDoc(collection(db, 'courts', id as string, 'queue'), resetLoser);
+      
+      addDoc(collection(db, 'courts', id, 'queue'), resetWinner)
+        .catch(async () => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: `courts/${id}/queue`,
+            operation: 'create',
+            requestResourceData: resetWinner
+          }));
+        });
+
+      addDoc(collection(db, 'courts', id, 'queue'), resetLoser)
+        .catch(async () => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: `courts/${id}/queue`,
+            operation: 'create',
+            requestResourceData: resetLoser
+          }));
+        });
+      
+      updateDoc(courtRef, { activeLeft: null, activeRight: null });
+    } else {
+      const resetLoser = { 
+        player1: loser.player1.toUpperCase(), 
+        player2: loser.player2.toUpperCase(), 
+        consecutiveWins: 0, 
+        joinedAt: serverTimestamp() 
+      };
+      addDoc(collection(db, 'courts', id, 'queue'), resetLoser)
+        .catch(async () => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: `courts/${id}/queue`,
+            operation: 'create',
+            requestResourceData: resetLoser
+          }));
+        });
       
       const updatedWinner = { ...winner, consecutiveWins: newWins };
       if (side === 'left') {
@@ -105,12 +142,20 @@ export default function CourtDetails() {
 
   const addPair = (p1: string, p2: string) => {
     if (!db) return;
-    addDoc(collection(db, 'courts', id as string, 'queue'), {
+    const newPair = {
       player1: p1.toUpperCase(),
       player2: p2.toUpperCase(),
       consecutiveWins: 0,
       joinedAt: serverTimestamp()
-    });
+    };
+    addDoc(collection(db, 'courts', id, 'queue'), newPair)
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `courts/${id}/queue`,
+          operation: 'create',
+          requestResourceData: newPair
+        }));
+      });
   };
 
   if (loadingCourt) {
@@ -132,7 +177,6 @@ export default function CourtDetails() {
 
   return (
     <main className="min-h-screen bg-black flex flex-col items-center p-4 md:p-8">
-      {/* Header */}
       <header className="w-full max-w-5xl flex flex-col items-center mb-8 relative">
         <Button 
           variant="ghost" 
@@ -147,11 +191,10 @@ export default function CourtDetails() {
         </div>
       </header>
 
-      {/* Main Info */}
       <div className="w-full max-w-5xl flex justify-between items-end mb-6">
         <div>
-          <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 uppercase text-[10px] mb-2 font-black tracking-widest">{court.modality.toUpperCase()}</Badge>
-          <h2 className="text-3xl font-black text-white italic uppercase leading-none">{court.name.toUpperCase()}</h2>
+          <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 uppercase text-[10px] mb-2 font-black tracking-widest">{court.modality?.toUpperCase()}</Badge>
+          <h2 className="text-3xl font-black text-white italic uppercase leading-none">{court.name?.toUpperCase()}</h2>
         </div>
         <Button 
           onClick={() => setIsAddPairOpen(true)}
@@ -162,7 +205,6 @@ export default function CourtDetails() {
       </div>
 
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Court Display */}
         <section className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between px-2">
             <h3 className="text-orange-500 font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-2">
@@ -173,13 +215,12 @@ export default function CourtDetails() {
           <div className="relative aspect-[4/3] w-full bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-2xl flex">
             <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/10 z-10" />
 
-            {/* Left Side */}
             <div className="flex-1 flex flex-col items-center justify-center p-6 court-gradient relative">
               {court.activeLeft ? (
                 <div className="flex flex-col items-center gap-4 text-center">
                   <div className="flex flex-col items-center">
-                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">{court.activeLeft.player1.toUpperCase()}</div>
-                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">& {court.activeLeft.player2.toUpperCase()}</div>
+                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">{court.activeLeft.player1?.toUpperCase()}</div>
+                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">& {court.activeLeft.player2?.toUpperCase()}</div>
                   </div>
                   <div className="flex items-center gap-2 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
                     <Trophy className="w-3 h-3 text-orange-500" />
@@ -197,13 +238,12 @@ export default function CourtDetails() {
               )}
             </div>
 
-            {/* Right Side */}
             <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
               {court.activeRight ? (
                 <div className="flex flex-col items-center gap-4 text-center">
                   <div className="flex flex-col items-center">
-                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">{court.activeRight.player1.toUpperCase()}</div>
-                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">& {court.activeRight.player2.toUpperCase()}</div>
+                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">{court.activeRight.player1?.toUpperCase()}</div>
+                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">& {court.activeRight.player2?.toUpperCase()}</div>
                   </div>
                   <div className="flex items-center gap-2 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
                     <Trophy className="w-3 h-3 text-orange-500" />
@@ -223,7 +263,6 @@ export default function CourtDetails() {
           </div>
         </section>
 
-        {/* Queue Display */}
         <section className="space-y-4">
           <div className="flex items-center justify-between px-2">
             <h3 className="text-orange-500 font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-2">
@@ -245,7 +284,7 @@ export default function CourtDetails() {
                     <div className="flex items-center gap-4">
                       <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-black font-black text-xs italic">{index + 1}</div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-black text-white uppercase italic">{pair.player1.toUpperCase()} & {pair.player2.toUpperCase()}</span>
+                        <span className="text-sm font-black text-white uppercase italic">{pair.player1?.toUpperCase()} & {pair.player2?.toUpperCase()}</span>
                         <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">LISTA DE ESPERA</span>
                       </div>
                     </div>
