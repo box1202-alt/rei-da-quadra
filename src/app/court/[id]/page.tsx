@@ -23,7 +23,6 @@ export default function CourtDetails() {
   const router = useRouter();
   const db = useFirestore();
   
-  // Memoização das referências para estabilidade
   const courtRef = useMemo(() => (db && id ? doc(db, 'courts', id) : null), [db, id]);
   const queueRef = useMemo(() => (db && id ? collection(db, 'courts', id, 'queue') : null), [db, id]);
   const queueQuery = useMemo(() => (queueRef ? query(queueRef, orderBy('joinedAt', 'asc')) : null), [queueRef]);
@@ -33,16 +32,14 @@ export default function CourtDetails() {
 
   const [isAddPairOpen, setIsAddPairOpen] = useState(false);
 
-  // Lógica automática para preencher a quadra a partir da fila
   useEffect(() => {
     if (!court || !waitingList || waitingList.length === 0 || !courtRef || !db || !id) return;
 
-    // Se um lado estiver vazio, puxa o primeiro da fila
     const fillSide = async (side: 'activeLeft' | 'activeRight', pair: PlayerPair) => {
       const pairId = pair.id;
       if (!pairId) return;
 
-      const updateData = { [side]: { ...pair } };
+      const updateData = { [side]: { ...pair, consecutiveWins: 0 } };
       
       updateDoc(courtRef, updateData)
         .catch(async () => {
@@ -53,7 +50,6 @@ export default function CourtDetails() {
           }));
         });
 
-      // Remove da fila após mover para a quadra
       deleteDoc(doc(db, 'courts', id, 'queue', pairId));
     };
 
@@ -75,13 +71,14 @@ export default function CourtDetails() {
     const newWins = (winner.consecutiveWins || 0) + 1;
 
     if (newWins >= 2) {
-      // REGRA: 2 VITÓRIAS = AMBOS SAEM
-      // O Vencedor vai para o topo da lista (precisa de um joinedAt menor que o primeiro da fila atual)
+      const next1 = waitingList && waitingList.length > 0 ? waitingList[0] : null;
+      const next2 = waitingList && waitingList.length > 1 ? waitingList[1] : null;
+
       let winnerTime = new Date();
-      if (waitingList && waitingList.length > 0) {
-        const firstInLine = waitingList[0].joinedAt as Timestamp;
-        if (firstInLine) {
-          winnerTime = new Date(firstInLine.toMillis() - 1000); 
+      if (waitingList && waitingList.length > 2) {
+        const thirdInLine = waitingList[2].joinedAt as Timestamp;
+        if (thirdInLine) {
+          winnerTime = new Date(thirdInLine.toMillis() - 1000); 
         }
       }
 
@@ -98,7 +95,15 @@ export default function CourtDetails() {
         consecutiveWins: 0, 
         joinedAt: serverTimestamp() 
       };
-      
+
+      updateDoc(courtRef, { 
+        activeLeft: next1 ? { ...next1, consecutiveWins: 0 } : null, 
+        activeRight: next2 ? { ...next2, consecutiveWins: 0 } : null 
+      });
+
+      if (next1?.id) deleteDoc(doc(db, 'courts', id, 'queue', next1.id));
+      if (next2?.id) deleteDoc(doc(db, 'courts', id, 'queue', next2.id));
+
       addDoc(collection(db, 'courts', id, 'queue'), resetWinner)
         .catch(async () => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -116,8 +121,6 @@ export default function CourtDetails() {
             requestResourceData: resetLoser
           }));
         });
-      
-      updateDoc(courtRef, { activeLeft: null, activeRight: null });
     } else {
       const resetLoser = { 
         player1: loser.player1.toUpperCase(), 
@@ -125,6 +128,7 @@ export default function CourtDetails() {
         consecutiveWins: 0, 
         joinedAt: serverTimestamp() 
       };
+      
       addDoc(collection(db, 'courts', id, 'queue'), resetLoser)
         .catch(async () => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({
