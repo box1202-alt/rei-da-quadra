@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -16,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 
 // Altere a senha de administrador aqui
-const ADMIN_PASSWORD = '1234';
+const ADMIN_PASSWORD = '140193';
 
 interface AdminDialogProps {
   isOpen: boolean;
