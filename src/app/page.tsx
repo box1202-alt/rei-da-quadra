@@ -63,6 +63,7 @@ export default function PortalReiDaQuadra() {
 
   return (
     <main className="min-h-screen bg-black flex flex-col items-center p-4 md:p-8">
+      {/* HEADER CENTRALIZADO COM LOGO E BRILHO */}
       <header className="w-full max-w-4xl flex flex-col items-center mb-16 mt-12">
         <div className="flex flex-col items-center">
           <div className="relative mb-8">
@@ -81,6 +82,7 @@ export default function PortalReiDaQuadra() {
         </div>
       </header>
 
+      {/* SEÇÃO DE QUADRAS DISPONÍVEIS - DISPOSIÇÃO VERTICAL */}
       <div className="w-full max-w-2xl flex justify-between items-end mb-8 px-2 border-b border-zinc-900 pb-4">
         <div>
           <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -96,6 +98,7 @@ export default function PortalReiDaQuadra() {
         </Button>
       </div>
 
+      {/* LISTA VERTICAL DE QUADRAS */}
       <div className="w-full max-w-2xl flex flex-col gap-4">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
@@ -132,11 +135,13 @@ export default function PortalReiDaQuadra() {
                   </div>
                 </div>
                 
+                {/* MARCA D'ÁGUA NO CARD */}
                 <div className="absolute -right-4 -bottom-4 opacity-[0.03] pointer-events-none group-hover:opacity-[0.06] transition-opacity">
                   <CrownBallIcon className="w-32 h-32" />
                 </div>
               </Card>
 
+              {/* BOTÃO DE EDIÇÃO (ADMIN) */}
               <Button
                 onClick={(e) => {
                   e.stopPropagation();
