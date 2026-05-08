@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -55,11 +54,11 @@ export default function PortalReiDaQuadra() {
         </div>
       </header>
 
-      {/* Seção de Arenas */}
+      {/* Seção de Quadras */}
       <div className="w-full max-w-2xl flex justify-between items-end mb-8 px-2 border-b border-zinc-900 pb-4">
         <div>
           <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] flex items-center gap-2">
-            <LayoutGrid className="w-3 h-3 text-orange-500" /> Arenas Disponíveis
+            <LayoutGrid className="w-3 h-3 text-orange-500" /> Quadras Disponíveis
           </h2>
         </div>
         <Button 
@@ -67,7 +66,7 @@ export default function PortalReiDaQuadra() {
           variant="ghost"
           className="text-orange-500 hover:text-orange-400 hover:bg-orange-500/5 font-bold h-8 text-[10px] transition-all uppercase italic tracking-widest"
         >
-          <Plus className="w-4 h-4 mr-1" /> Nova Arena
+          <Plus className="w-4 h-4 mr-1" /> Nova Quadra
         </Button>
       </div>
 
@@ -80,7 +79,7 @@ export default function PortalReiDaQuadra() {
         ) : courts?.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center text-zinc-800 border-2 border-dashed border-zinc-900 rounded-2xl">
             <LayoutGrid className="w-12 h-12 mb-4 opacity-20" />
-            <p className="text-sm font-medium uppercase italic tracking-widest opacity-50">Nenhuma arena ativa.</p>
+            <p className="text-sm font-medium uppercase italic tracking-widest opacity-50">Nenhuma quadra ativa.</p>
           </div>
         ) : (
           courts?.map((court) => (
