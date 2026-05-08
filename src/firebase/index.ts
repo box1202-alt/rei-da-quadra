@@ -1,27 +1,27 @@
 
 'use client';
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { 
   getFirestore, 
   initializeFirestore, 
   persistentLocalCache, 
-  persistentMultipleTabManager 
+  persistentMultipleTabManager,
+  Firestore
 } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 export function initializeFirebase() {
+  // Garantir que a inicialização ocorra apenas no cliente para evitar erros de SSR com chaves de API
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   
-  // Habilita persistência offline para manter os dados "insistentemente" entre navegações e abas
-  let firestore;
+  let firestore: Firestore;
   try {
     firestore = initializeFirestore(app, {
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
     });
   } catch (e) {
-    // Caso já tenha sido inicializado
     firestore = getFirestore(app);
   }
   
