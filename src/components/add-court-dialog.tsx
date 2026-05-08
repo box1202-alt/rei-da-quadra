@@ -15,6 +15,9 @@ import { Label } from "@/components/ui/label";
 import { Shield, LayoutGrid } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+// Altere a senha de administrador aqui
+const ADMIN_PASSWORD = '1234';
+
 interface AddCourtDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -30,7 +33,7 @@ export function AddCourtDialog({ isOpen, onClose, onAdd }: AddCourtDialogProps) 
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === '1234') { // Senha padrão solicitada
+    if (password === ADMIN_PASSWORD) {
       setStep('form');
       setPassword('');
     } else {

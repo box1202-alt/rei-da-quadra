@@ -14,6 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
+// Altere a senha de administrador aqui
+const ADMIN_PASSWORD = '1234';
+
 interface AdminDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -29,7 +32,7 @@ export function AdminDialog({ isOpen, onClose, onSave }: AdminDialogProps) {
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === '1234') { // Pre-defined numeric password
+    if (password === ADMIN_PASSWORD) {
       setStep('form');
     } else {
       toast({
