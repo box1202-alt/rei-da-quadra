@@ -4,25 +4,27 @@
 import React, { useState } from 'react';
 import { CrownBallIcon } from '@/components/crown-ball-icon';
 import { Button } from '@/components/ui/button';
-import { Plus, LayoutGrid, ArrowRight, ShieldCheck, Settings } from 'lucide-react';
+import { Plus, LayoutGrid, ArrowRight, ShieldCheck, Settings, Trash2 } from 'lucide-react';
 import { useCollection, useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { AdminDialog } from '@/components/admin-dialog';
 import { CourtConfig } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PortalReiDaQuadra() {
   const db = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
   const { data: courts, loading } = useCollection<CourtConfig>(
     db ? collection(db, 'courts') : null
   );
   
-  const [adminDialogMode, setAdminDialogMode] = useState<'add' | 'edit' | null>(null);
+  const [adminDialogMode, setAdminDialogMode] = useState<'add' | 'edit' | 'reset' | null>(null);
   const [selectedCourt, setSelectedCourt] = useState<CourtConfig | null>(null);
 
   const handleAddCourt = (name: string, modality: string) => {
@@ -59,6 +61,31 @@ export default function PortalReiDaQuadra() {
           requestResourceData: updatedData
         }));
       });
+  };
+
+  const handleResetSystem = async () => {
+    if (!db || !courts || courts.length === 0) return;
+    
+    const batch = writeBatch(db);
+    courts.forEach((court) => {
+      if (court.id) {
+        batch.delete(doc(db, 'courts', court.id));
+      }
+    });
+
+    try {
+      await batch.commit();
+      toast({
+        title: "SISTEMA RESETADO",
+        description: "TODAS AS QUADRAS E DADOS FORAM APAGADOS.",
+      });
+    } catch (e) {
+      toast({
+        title: "ERRO AO RESETAR",
+        description: "NÃO FOI POSSÍVEL LIMPAR O BANCO DE DADOS.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -104,13 +131,13 @@ export default function PortalReiDaQuadra() {
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-32 rounded-xl bg-zinc-900/50 animate-pulse border border-zinc-800" />
           ))
-        ) : courts?.length === 0 ? (
+        ) : !courts || courts.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center text-zinc-800 border-2 border-dashed border-zinc-900 rounded-2xl">
             <LayoutGrid className="w-12 h-12 mb-4 opacity-20" />
             <p className="text-sm font-black uppercase italic tracking-widest opacity-50">NENHUMA QUADRA ATIVA.</p>
           </div>
         ) : (
-          courts?.map((court) => (
+          courts.map((court) => (
             <div key={court.id} className="relative group">
               <Card 
                 onClick={() => router.push(`/court/${court.id}`)}
@@ -160,24 +187,33 @@ export default function PortalReiDaQuadra() {
       </div>
 
       <footer className="mt-20 pb-12 flex flex-col items-center gap-4">
-        <div className="flex items-center gap-2 text-zinc-800 text-[9px] tracking-[0.5em] uppercase font-black">
+        <Button
+          onClick={() => setAdminDialogMode('reset')}
+          variant="ghost"
+          className="flex items-center gap-2 text-zinc-800 hover:text-red-500 text-[9px] tracking-[0.5em] uppercase font-black transition-colors"
+        >
+          <Trash2 className="w-3 h-3" /> RESET GERAL DO SISTEMA
+        </Button>
+        <div className="flex items-center gap-2 text-zinc-900 text-[9px] tracking-[0.5em] uppercase font-black mt-2">
           <ShieldCheck className="w-3 h-3" /> SISTEMA ADMINISTRATIVO
         </div>
-        <div className="text-zinc-700 text-[8px] font-black uppercase tracking-[0.2em] mt-2 opacity-50">
+        <div className="text-zinc-700 text-[8px] font-black uppercase tracking-[0.2em] mt-4 opacity-50">
           Developed by: Leandro Borges
         </div>
       </footer>
 
       <AdminDialog 
         isOpen={adminDialogMode !== null}
+        mode={adminDialogMode || 'add'}
         onClose={() => {
           setAdminDialogMode(null);
           setSelectedCourt(null);
         }}
         onSave={adminDialogMode === 'add' ? handleAddCourt : handleEditCourt}
+        onReset={handleResetSystem}
         initialName={selectedCourt?.name}
         initialModality={selectedCourt?.modality}
-        title={adminDialogMode === 'add' ? 'NOVA QUADRA' : 'EDITAR QUADRA'}
+        title={adminDialogMode === 'add' ? 'NOVA QUADRA' : adminDialogMode === 'reset' ? 'RESET GERAL' : 'EDITAR QUADRA'}
       />
     </main>
   );
