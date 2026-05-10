@@ -14,6 +14,8 @@ import { useDoc, useCollection, useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { doc, updateDoc, collection, addDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp } from 'firebase/firestore';
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export default function CourtDetails() {
   const params = useParams();
@@ -31,6 +33,7 @@ export default function CourtDetails() {
   const { data: waitingList, loading: loadingQueue } = useCollection<PlayerPair>(queueQuery);
 
   const [isAddPairOpen, setIsAddPairOpen] = useState(false);
+  const [isPreferenceRuleEnabled, setIsPreferenceRuleEnabled] = useState(false);
 
   const handleWin = async (side: 'left' | 'right') => {
     if (!court || !courtRef || !db || !id || !waitingList) return;
@@ -42,8 +45,8 @@ export default function CourtDetails() {
 
     const newWins = (winner.consecutiveWins || 0) + 1;
 
-    // REGRA DAS 2 VITÓRIAS CONSECUTIVAS
-    if (newWins >= 2) {
+    // REGRA DE PREFERÊNCIA (2 VITÓRIAS CONSECUTIVAS)
+    if (isPreferenceRuleEnabled && newWins >= 2) {
       // 1. Ambas as duplas saem da quadra
       // 2. As duas próximas da fila entram
       const next1 = waitingList && waitingList.length > 0 ? waitingList[0] : null;
@@ -230,12 +233,16 @@ export default function CourtDetails() {
           <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 uppercase text-[10px] mb-2 font-black tracking-widest">{court.modality?.toUpperCase()}</Badge>
           <h2 className="text-3xl font-black text-white italic uppercase leading-none">{court.name?.toUpperCase()}</h2>
         </div>
-        <Button 
-          onClick={() => setIsAddPairOpen(true)}
-          className="bg-orange-600 hover:bg-orange-700 text-black font-black uppercase italic text-xs py-5"
-        >
-          <Plus className="w-4 h-4 mr-2" /> ADICIONAR DUPLA
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Switch id="preference-rule" checked={isPreferenceRuleEnabled} onCheckedChange={setIsPreferenceRuleEnabled} />
+          <Label htmlFor="preference-rule" className="text-white">Habilitar Regra de Preferência</Label>
+          <Button 
+            onClick={() => setIsAddPairOpen(true)}
+            className="bg-orange-600 hover:bg-orange-700 text-black font-black uppercase italic text-xs py-5"
+          >
+            <Plus className="w-4 h-4 mr-2" /> ADICIONAR DUPLA
+          </Button>
+        </div>
       </div>
 
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-3 gap-8">
