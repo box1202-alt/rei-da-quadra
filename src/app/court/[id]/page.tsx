@@ -32,37 +32,8 @@ export default function CourtDetails() {
 
   const [isAddPairOpen, setIsAddPairOpen] = useState(false);
 
-  // Auto-preenchimento das quadras quando houver vaga
-  useEffect(() => {
-    if (!court || !waitingList || waitingList.length === 0 || !courtRef || !db || !id) return;
-
-    const fillSide = async (side: 'activeLeft' | 'activeRight', pair: PlayerPair) => {
-      const pairId = pair.id;
-      if (!pairId) return;
-
-      const updateData = { [side]: { ...pair, consecutiveWins: 0 } };
-      
-      updateDoc(courtRef, updateData)
-        .catch(async () => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: courtRef.path,
-            operation: 'update',
-            requestResourceData: updateData
-          }));
-        });
-
-      deleteDoc(doc(db, 'courts', id, 'queue', pairId));
-    };
-
-    if (!court.activeLeft) {
-      fillSide('activeLeft', waitingList[0]);
-    } else if (!court.activeRight) {
-      fillSide('activeRight', waitingList[0]);
-    }
-  }, [court, waitingList, courtRef, db, id]);
-
   const handleWin = async (side: 'left' | 'right') => {
-    if (!court || !courtRef || !db || !id) return;
+    if (!court || !courtRef || !db || !id || !waitingList) return;
 
     const winner = side === 'left' ? court.activeLeft : court.activeRight;
     const loser = side === 'left' ? court.activeRight : court.activeLeft;
@@ -131,48 +102,82 @@ export default function CourtDetails() {
           }));
         });
     } else {
-      // Regra normal: Vencedor fica, perdedor sai
-      const resetLoser = { 
-        player1: loser.player1.toUpperCase(), 
-        player2: loser.player2.toUpperCase(), 
-        consecutiveWins: 0, 
-        joinedAt: serverTimestamp() 
-      };
-      
-      addDoc(collection(db, 'courts', id, 'queue'), resetLoser)
-        .catch(async () => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: `courts/${id}/queue`,
-            operation: 'create',
-            requestResourceData: resetLoser
-          }));
-        });
-      
-      const updatedWinner = { ...winner, consecutiveWins: newWins };
-      if (side === 'left') {
-        updateDoc(courtRef, { activeLeft: updatedWinner, activeRight: null });
-      } else {
-        updateDoc(courtRef, { activeRight: updatedWinner, activeLeft: null });
-      }
+        // Regra normal: Vencedor fica, perdedor sai
+        const resetLoser = { 
+            player1: loser.player1.toUpperCase(), 
+            player2: loser.player2.toUpperCase(), 
+            consecutiveWins: 0, 
+            joinedAt: serverTimestamp() 
+        };
+        
+        addDoc(collection(db, 'courts', id, 'queue'), resetLoser)
+          .catch(async () => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: `courts/${id}/queue`,
+              operation: 'create',
+              requestResourceData: resetLoser
+            }));
+          });
+        
+        const updatedWinner = { ...winner, consecutiveWins: newWins };
+        const nextInLine = waitingList && waitingList.length > 0 ? waitingList[0] : null;
+
+        if (side === 'left') {
+          const newActiveRight = nextInLine ? { ...nextInLine, consecutiveWins: 0 } : null;
+          updateDoc(courtRef, { activeLeft: updatedWinner, activeRight: newActiveRight });
+        } else {
+          const newActiveLeft = nextInLine ? { ...nextInLine, consecutiveWins: 0 } : null;
+          updateDoc(courtRef, { activeRight: updatedWinner, activeLeft: newActiveLeft });
+        }
+
+        if (nextInLine?.id) {
+            deleteDoc(doc(db, 'courts', id, 'queue', nextInLine.id));
+        }
     }
   };
 
   const addPair = (p1: string, p2: string) => {
-    if (!db || !id) return;
+    if (!db || !id || !court || !courtRef) return;
     const newPair = {
       player1: p1.toUpperCase(),
       player2: p2.toUpperCase(),
       consecutiveWins: 0,
-      joinedAt: serverTimestamp()
     };
-    addDoc(collection(db, 'courts', id, 'queue'), newPair)
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: `courts/${id}/queue`,
-          operation: 'create',
-          requestResourceData: newPair
-        }));
-      });
+
+    if (!court.activeLeft) {
+      const updateData = { activeLeft: newPair };
+      updateDoc(courtRef, updateData)
+        .catch(async () => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: courtRef.path,
+            operation: 'update',
+            requestResourceData: updateData
+          }));
+        });
+    } else if (!court.activeRight) {
+      const updateData = { activeRight: newPair };
+      updateDoc(courtRef, updateData)
+        .catch(async () => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: courtRef.path,
+            operation: 'update',
+            requestResourceData: updateData
+          }));
+        });
+    } else {
+      const newPairWithTimestamp = {
+        ...newPair,
+        joinedAt: serverTimestamp()
+      };
+      addDoc(collection(db, 'courts', id, 'queue'), newPairWithTimestamp)
+        .catch(async () => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: `courts/${id}/queue`,
+            operation: 'create',
+            requestResourceData: newPairWithTimestamp
+          }));
+        });
+    }
   };
 
   const handleDeletePair = async (pairId: string) => {
