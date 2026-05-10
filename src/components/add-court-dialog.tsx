@@ -15,7 +15,7 @@ import { Shield, LayoutGrid } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Altere a senha de administrador aqui
-const ADMIN_PASSWORD = '140193';
+const ADMIN_PASSWORD = '1234';
 
 interface AddCourtDialogProps {
   isOpen: boolean;
@@ -67,11 +67,9 @@ export function AddCourtDialog({ isOpen, onClose, onAdd }: AddCourtDialogProps) 
         {step === 'password' ? (
           <form onSubmit={handlePasswordSubmit}>
             <DialogHeader>
-              <DialogHeader>
-                <DialogTitle className="text-orange-500 font-headline flex items-center gap-2">
-                  <Shield className="w-5 h-5" /> Modo Administrador
-                </DialogTitle>
-              </DialogHeader>
+              <DialogTitle className="text-orange-500 font-headline flex items-center gap-2">
+                <Shield className="w-5 h-5" /> Modo Administrador
+              </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="flex flex-col gap-2">

@@ -14,7 +14,7 @@ import { Card } from '@/components/ui/card';
 import { useDoc, useCollection, useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { doc, updateDoc, collection, addDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc, collection, addDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, DocumentReference, CollectionReference, Query } from 'firebase/firestore';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
@@ -26,12 +26,21 @@ export default function CourtDetails() {
   const router = useRouter();
   const db = useFirestore();
   
-  const courtRef = useMemo(() => (db && id ? doc(db, 'courts', id) : null), [db, id]);
-  const queueRef = useMemo(() => (db && id ? collection(db, 'courts', id, 'queue') : null), [db, id]);
-  const queueQuery = useMemo(() => (queueRef ? query(queueRef, orderBy('joinedAt', 'asc')) : null), [queueRef]);
+  const courtRef = useMemo(
+    () => (db && id ? doc(db, 'courts', id) as DocumentReference<CourtConfig> : null),
+    [db, id]
+  );
+  const queueRef = useMemo(
+    () => (db && id ? collection(db, 'courts', id, 'queue') as CollectionReference<PlayerPair> : null),
+    [db, id]
+  );
+  const queueQuery = useMemo(
+    () => (queueRef ? query(queueRef, orderBy('joinedAt', 'asc')) as Query<PlayerPair> : null),
+    [queueRef]
+  );
 
-  const { data: court, loading: loadingCourt } = useDoc<CourtConfig>(courtRef);
-  const { data: waitingList, loading: loadingQueue } = useCollection<PlayerPair>(queueQuery);
+  const { data: court, loading: loadingCourt } = useDoc(courtRef);
+  const { data: waitingList, loading: loadingQueue } = useCollection(queueQuery);
 
   const [isAddPairOpen, setIsAddPairOpen] = useState(false);
   const [isEditPairOpen, setIsEditPairOpen] = useState(false);
@@ -112,7 +121,7 @@ export default function CourtDetails() {
     }
   };
 
-  const addPair = (p1: string, p2: string) => {
+  const addPair = async (p1: string, p2: string) => {
     if (!db || !id || !court || !courtRef) return;
     const newPair = {
       player1: p1.toUpperCase(),
@@ -121,15 +130,15 @@ export default function CourtDetails() {
     };
 
     if (!court.activeLeft) {
-      updateDoc(courtRef, { activeLeft: newPair });
+      await updateDoc(courtRef, { activeLeft: newPair });
     } else if (!court.activeRight) {
-      updateDoc(courtRef, { activeRight: newPair });
+      await updateDoc(courtRef, { activeRight: newPair });
     } else {
       const newPairWithTimestamp = {
         ...newPair,
         joinedAt: serverTimestamp()
       };
-      addDoc(collection(db, 'courts', id, 'queue'), newPairWithTimestamp);
+      await addDoc(collection(db, 'courts', id, 'queue'), newPairWithTimestamp);
     }
   };
 
