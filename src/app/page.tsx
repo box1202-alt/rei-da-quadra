@@ -8,7 +8,7 @@ import { Plus, LayoutGrid, ArrowRight, ShieldCheck, Settings, Trash2 } from 'luc
 import { useCollection, useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, writeBatch, deleteDoc, CollectionReference } from 'firebase/firestore';
+import { collection, query, orderBy, addDoc, serverTimestamp, doc, updateDoc, writeBatch, deleteDoc, CollectionReference } from 'firebase/firestore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
@@ -20,7 +20,7 @@ export default function PortalReiDaQuadra() {
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-  const courtsCollection = db ? collection(db, 'courts') as CollectionReference<CourtConfig> : null;
+  const courtsCollection = db ? query(collection(db, 'courts') as CollectionReference<CourtConfig>, orderBy('createdAt', 'asc')) : null;
   const { data: courts, loading } = useCollection<CourtConfig>(courtsCollection);
   const [adminDialogMode, setAdminDialogMode] = useState<'add' | 'edit' | 'reset' | null>(null);
   const [selectedCourt, setSelectedCourt] = useState<CourtConfig | null>(null);
