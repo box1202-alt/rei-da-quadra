@@ -5,8 +5,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { CrownBallIcon } from '@/components/crown-ball-icon';
 import { AddPairDialog } from '@/components/add-pair-dialog';
+import { EditPairDialog } from '@/components/edit-pair-dialog';
 import { Button } from '@/components/ui/button';
-import { Plus, Trophy, MoveRight, Layers, ArrowLeft, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Trophy, MoveRight, Layers, ArrowLeft, Loader2, Trash2, Settings } from 'lucide-react';
 import { PlayerPair, CourtConfig } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -33,6 +34,8 @@ export default function CourtDetails() {
   const { data: waitingList, loading: loadingQueue } = useCollection<PlayerPair>(queueQuery);
 
   const [isAddPairOpen, setIsAddPairOpen] = useState(false);
+  const [isEditPairOpen, setIsEditPairOpen] = useState(false);
+  const [editingPair, setEditingPair] = useState<{type: 'active' | 'queue', side?: 'left' | 'right', pair: PlayerPair} | null>(null);
   const [isPreferenceRuleEnabled, setIsPreferenceRuleEnabled] = useState(false);
 
   const handleWin = async (side: 'left' | 'right') => {
@@ -45,19 +48,14 @@ export default function CourtDetails() {
 
     const newWins = (winner.consecutiveWins || 0) + 1;
 
-    // REGRA DE PREFERÊNCIA (2 VITÓRIAS CONSECUTIVAS)
     if (isPreferenceRuleEnabled && newWins >= 2) {
-      // 1. Ambas as duplas saem da quadra
-      // 2. As duas próximas da fila entram
       const next1 = waitingList && waitingList.length > 0 ? waitingList[0] : null;
       const next2 = waitingList && waitingList.length > 1 ? waitingList[1] : null;
 
-      // Cálculo para colocar o vencedor na Posição #1 (antes do atual primeiro da fila restante)
       let winnerTime = new Date();
       if (waitingList && waitingList.length > 2) {
         const thirdInLine = waitingList[2].joinedAt as Timestamp;
         if (thirdInLine) {
-          // Define o tempo como 1 segundo antes do que será o novo #1
           winnerTime = new Date(thirdInLine.toMillis() - 1000); 
         }
       }
@@ -76,36 +74,18 @@ export default function CourtDetails() {
         joinedAt: serverTimestamp() 
       };
 
-      // Atualiza quadra com novos jogadores ou vazio
       updateDoc(courtRef, { 
         activeLeft: next1 ? { ...next1, consecutiveWins: 0 } : null, 
         activeRight: next2 ? { ...next2, consecutiveWins: 0 } : null 
       });
 
-      // Remove da fila quem entrou
       if (next1?.id) deleteDoc(doc(db, 'courts', id, 'queue', next1.id));
       if (next2?.id) deleteDoc(doc(db, 'courts', id, 'queue', next2.id));
 
-      // Re-insere as duplas que saíram na fila
-      addDoc(collection(db, 'courts', id, 'queue'), resetWinner)
-        .catch(async () => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: `courts/${id}/queue`,
-            operation: 'create',
-            requestResourceData: resetWinner
-          }));
-        });
+      addDoc(collection(db, 'courts', id, 'queue'), resetWinner);
+      addDoc(collection(db, 'courts', id, 'queue'), resetLoser);
 
-      addDoc(collection(db, 'courts', id, 'queue'), resetLoser)
-        .catch(async () => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: `courts/${id}/queue`,
-            operation: 'create',
-            requestResourceData: resetLoser
-          }));
-        });
     } else {
-        // Regra normal: Vencedor fica, perdedor sai
         const resetLoser = { 
             player1: loser.player1.toUpperCase(), 
             player2: loser.player2.toUpperCase(), 
@@ -113,14 +93,7 @@ export default function CourtDetails() {
             joinedAt: serverTimestamp() 
         };
         
-        addDoc(collection(db, 'courts', id, 'queue'), resetLoser)
-          .catch(async () => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: `courts/${id}/queue`,
-              operation: 'create',
-              requestResourceData: resetLoser
-            }));
-          });
+        addDoc(collection(db, 'courts', id, 'queue'), resetLoser);
         
         const updatedWinner = { ...winner, consecutiveWins: newWins };
         const nextInLine = waitingList && waitingList.length > 0 ? waitingList[0] : null;
@@ -148,51 +121,61 @@ export default function CourtDetails() {
     };
 
     if (!court.activeLeft) {
-      const updateData = { activeLeft: newPair };
-      updateDoc(courtRef, updateData)
-        .catch(async () => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: courtRef.path,
-            operation: 'update',
-            requestResourceData: updateData
-          }));
-        });
+      updateDoc(courtRef, { activeLeft: newPair });
     } else if (!court.activeRight) {
-      const updateData = { activeRight: newPair };
-      updateDoc(courtRef, updateData)
-        .catch(async () => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: courtRef.path,
-            operation: 'update',
-            requestResourceData: updateData
-          }));
-        });
+      updateDoc(courtRef, { activeRight: newPair });
     } else {
       const newPairWithTimestamp = {
         ...newPair,
         joinedAt: serverTimestamp()
       };
-      addDoc(collection(db, 'courts', id, 'queue'), newPairWithTimestamp)
-        .catch(async () => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: `courts/${id}/queue`,
-            operation: 'create',
-            requestResourceData: newPairWithTimestamp
-          }));
-        });
+      addDoc(collection(db, 'courts', id, 'queue'), newPairWithTimestamp);
     }
   };
 
-  const handleDeletePair = async (pairId: string) => {
+  const handleDeletePairFromQueue = async (pairId: string) => {
     if (!db || !id || !pairId) return;
+    deleteDoc(doc(db, 'courts', id, 'queue', pairId));
+  };
+
+  const handleEditQueuePair = async (pairId: string, p1: string, p2: string) => {
+    if (!db || !id) return;
     const pairRef = doc(db, 'courts', id, 'queue', pairId);
-    deleteDoc(pairRef)
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: pairRef.path,
-          operation: 'delete'
-        }));
-      });
+    const updatedData = {
+        player1: p1.toUpperCase(),
+        player2: p2.toUpperCase(),
+    };
+    updateDoc(pairRef, updatedData);
+  };
+
+  const handleEditActivePair = async (side: 'left' | 'right', p1: string, p2: string) => {
+    if (!court || !courtRef) return;
+    const sideToUpdate = side === 'left' ? 'activeLeft' : 'activeRight';
+    const pairToUpdate = court[sideToUpdate];
+    if (!pairToUpdate) return;
+
+    const updatedPair = {
+        ...pairToUpdate,
+        player1: p1.toUpperCase(),
+        player2: p2.toUpperCase(),
+    };
+
+    updateDoc(courtRef, { [sideToUpdate]: updatedPair });
+  };
+
+  const handleDeleteActivePair = async (side: 'left' | 'right') => {
+      if (!court || !courtRef || !db || !id || !waitingList) return;
+
+      const sideToUpdate = side === 'left' ? 'activeLeft' : 'activeRight';
+      const nextInLine = waitingList.length > 0 ? waitingList[0] : null;
+
+      const newActivePair = nextInLine ? { ...nextInLine, consecutiveWins: 0 } : null;
+
+      updateDoc(courtRef, { [sideToUpdate]: newActivePair });
+
+      if (nextInLine?.id) {
+          deleteDoc(doc(db, 'courts', id, 'queue', nextInLine.id));
+      }
   };
 
   if (loadingCourt || !id) {
@@ -233,9 +216,11 @@ export default function CourtDetails() {
           <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 uppercase text-[10px] mb-2 font-black tracking-widest">{court.modality?.toUpperCase()}</Badge>
           <h2 className="text-3xl font-black text-white italic uppercase leading-none">{court.name?.toUpperCase()}</h2>
         </div>
-        <div className="flex items-center space-x-2">
-          <Switch id="preference-rule" checked={isPreferenceRuleEnabled} onCheckedChange={setIsPreferenceRuleEnabled} />
-          <Label htmlFor="preference-rule" className="text-white">Habilitar Regra de Preferência</Label>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <Switch id="preference-rule" checked={isPreferenceRuleEnabled} onCheckedChange={setIsPreferenceRuleEnabled} />
+            <Label htmlFor="preference-rule" className="text-white text-xs uppercase font-bold tracking-wider">Regra de Preferência</Label>
+          </div>
           <Button 
             onClick={() => setIsAddPairOpen(true)}
             className="bg-orange-600 hover:bg-orange-700 text-black font-black uppercase italic text-xs py-5"
@@ -256,47 +241,75 @@ export default function CourtDetails() {
           <div className="relative aspect-[4/3] w-full bg-zinc-950 rounded-2xl border border-zinc-900 overflow-hidden shadow-2xl flex">
             <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/10 z-10" />
 
-            <div className="flex-1 flex flex-col items-center justify-center p-6 court-gradient relative">
+            <div className="flex-1 flex flex-col items-center justify-center p-6 court-gradient relative group">
               {court.activeLeft ? (
-                <div className="flex flex-col items-center gap-4 text-center">
-                  <div className="flex flex-col items-center">
-                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">{court.activeLeft.player1?.toUpperCase()}</div>
-                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">& {court.activeLeft.player2?.toUpperCase()}</div>
-                  </div>
-                  <div className="flex items-center gap-2 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
-                    <Trophy className="w-3 h-3 text-orange-500" />
-                    <span className="text-orange-500 font-black text-[10px] uppercase">{court.activeLeft.consecutiveWins} {court.activeLeft.consecutiveWins === 1 ? 'VITÓRIA' : 'VITÓRIAS'}</span>
-                  </div>
-                  <Button 
-                    onClick={() => handleWin('left')} 
-                    className="mt-6 bg-orange-600 hover:bg-orange-500 text-black font-black uppercase italic text-sm py-7 px-10 rounded-xl victory-button-press shadow-[0_0_20px_rgba(234,88,12,0.3)]"
+                <>
+                  <Button
+                      onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPair({ type: 'active', side: 'left', pair: court.activeLeft! });
+                          setIsEditPairOpen(true);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-zinc-900/50 border border-zinc-800 text-zinc-500 hover:text-orange-500 hover:bg-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    VITÓRIA
+                      <Settings className="w-4 h-4" />
                   </Button>
-                </div>
+                  <div className="flex flex-col items-center gap-4 text-center">
+                    <div className="flex flex-col items-center">
+                      <div className="text-2xl md:text-3xl font-black text-white uppercase italic">{court.activeLeft.player1?.toUpperCase()}</div>
+                      <div className="text-2xl md:text-3xl font-black text-white uppercase italic">& {court.activeLeft.player2?.toUpperCase()}</div>
+                    </div>
+                    <div className="flex items-center gap-2 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
+                      <Trophy className="w-3 h-3 text-orange-500" />
+                      <span className="text-orange-500 font-black text-[10px] uppercase">{court.activeLeft.consecutiveWins} {court.activeLeft.consecutiveWins === 1 ? 'VITÓRIA' : 'VITÓRIAS'}</span>
+                    </div>
+                    <Button 
+                      onClick={() => handleWin('left')} 
+                      className="mt-6 bg-orange-600 hover:bg-orange-500 text-black font-black uppercase italic text-sm py-7 px-10 rounded-xl victory-button-press shadow-[0_0_20px_rgba(234,88,12,0.3)]"
+                    >
+                      VITÓRIA
+                    </Button>
+                  </div>
+                </>
               ) : (
                 <div className="text-zinc-900 font-black text-5xl opacity-40 select-none uppercase italic tracking-tighter">VAZIO</div>
               )}
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
+            <div className="flex-1 flex flex-col items-center justify-center p-6 relative group">
               {court.activeRight ? (
-                <div className="flex flex-col items-center gap-4 text-center">
-                  <div className="flex flex-col items-center">
-                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">{court.activeRight.player1?.toUpperCase()}</div>
-                    <div className="text-2xl md:text-3xl font-black text-white uppercase italic">& {court.activeRight.player2?.toUpperCase()}</div>
-                  </div>
-                  <div className="flex items-center gap-2 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
-                    <Trophy className="w-3 h-3 text-orange-500" />
-                    <span className="text-orange-500 font-black text-[10px] uppercase">{court.activeRight.consecutiveWins} {court.activeRight.consecutiveWins === 1 ? 'VITÓRIA' : 'VITÓRIAS'}</span>
-                  </div>
-                  <Button 
-                    onClick={() => handleWin('right')} 
-                    className="mt-6 bg-orange-600 hover:bg-orange-500 text-black font-black uppercase italic text-sm py-7 px-10 rounded-xl victory-button-press shadow-[0_0_20px_rgba(234,88,12,0.3)]"
+                <>
+                  <Button
+                      onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPair({ type: 'active', side: 'right', pair: court.activeRight! });
+                          setIsEditPairOpen(true);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-zinc-900/50 border border-zinc-800 text-zinc-500 hover:text-orange-500 hover:bg-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    VITÓRIA
+                      <Settings className="w-4 h-4" />
                   </Button>
-                </div>
+                  <div className="flex flex-col items-center gap-4 text-center">
+                    <div className="flex flex-col items-center">
+                      <div className="text-2xl md:text-3xl font-black text-white uppercase italic">{court.activeRight.player1?.toUpperCase()}</div>
+                      <div className="text-2xl md:text-3xl font-black text-white uppercase italic">& {court.activeRight.player2?.toUpperCase()}</div>
+                    </div>
+                    <div className="flex items-center gap-2 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
+                      <Trophy className="w-3 h-3 text-orange-500" />
+                      <span className="text-orange-500 font-black text-[10px] uppercase">{court.activeRight.consecutiveWins} {court.activeRight.consecutiveWins === 1 ? 'VITÓRIA' : 'VITÓRIAS'}</span>
+                    </div>
+                    <Button 
+                      onClick={() => handleWin('right')} 
+                      className="mt-6 bg-orange-600 hover:bg-orange-500 text-black font-black uppercase italic text-sm py-7 px-10 rounded-xl victory-button-press shadow-[0_0_20px_rgba(234,88,12,0.3)]"
+                    >
+                      VITÓRIA
+                    </Button>
+                  </div>
+                </>
               ) : (
                 <div className="text-zinc-900 font-black text-5xl opacity-40 select-none uppercase italic tracking-tighter">VAZIO</div>
               )}
@@ -321,23 +334,27 @@ export default function CourtDetails() {
             ) : (
               waitingList.map((pair, index) => (
                 <Card key={pair.id} className="bg-zinc-900/50 border-zinc-800 p-4 hover:border-zinc-700 transition-colors group relative">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-black font-black text-xs italic">{index + 1}</div>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-black text-white uppercase italic">{pair.player1?.toUpperCase()} & {pair.player2?.toUpperCase()}</span>
-                        <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">LISTA DE ESPERA</span>
-                      </div>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-black font-black text-xs italic">{index + 1}</div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-black text-white uppercase italic">{pair.player1?.toUpperCase()} & {pair.player2?.toUpperCase()}</span>
+                            <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">LISTA DE ESPERA</span>
+                        </div>
+                        </div>
                     </div>
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-zinc-700 hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                      onClick={() => handleDeletePair(pair.id)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingPair({ type: 'queue', pair: pair });
+                            setIsEditPairOpen(true);
+                        }}
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1/2 -translate-y-1/2 right-4 w-8 h-8 rounded-full bg-zinc-900/50 border border-zinc-800 text-zinc-500 hover:text-orange-500 hover:bg-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <Trash2 className="w-4 h-4" />
+                        <Settings className="w-4 h-4" />
                     </Button>
-                  </div>
                 </Card>
               ))
             )}
@@ -352,6 +369,33 @@ export default function CourtDetails() {
       </footer>
 
       <AddPairDialog isOpen={isAddPairOpen} onClose={() => setIsAddPairOpen(false)} onAdd={addPair} />
+      <EditPairDialog
+        isOpen={isEditPairOpen}
+        onClose={() => {
+            setIsEditPairOpen(false);
+            setEditingPair(null);
+        }}
+        onSave={(p1, p2) => {
+            if (editingPair) {
+                if (editingPair.type === 'active' && editingPair.side) {
+                    handleEditActivePair(editingPair.side, p1, p2);
+                } else if (editingPair.type === 'queue' && editingPair.pair.id) {
+                    handleEditQueuePair(editingPair.pair.id, p1, p2);
+                }
+            }
+        }}
+        onDelete={() => {
+            if (editingPair) {
+                if (editingPair.type === 'active' && editingPair.side) {
+                    handleDeleteActivePair(editingPair.side);
+                } else if (editingPair.type === 'queue' && editingPair.pair.id) {
+                    handleDeletePairFromQueue(editingPair.pair.id);
+                }
+            }
+        }}
+        initialPlayer1={editingPair?.pair.player1}
+        initialPlayer2={editingPair?.pair.player2}
+      />
     </main>
   );
 }
