@@ -13,9 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ShieldCheck, Copy, MessageSquare } from "lucide-react";
-
-// Altere a senha de administrador aqui
-const ADMIN_PASSWORD = '1234';
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { useAuth } from '@/firebase/provider';
+import { useUser } from '@/firebase/auth/use-user';
 
 interface AdminDialogProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ interface AdminDialogProps {
   initialName?: string;
   initialModality?: string;
   title: string;
-  mode?: 'add' | 'edit' | 'reset';
+  mode?: 'add' | 'edit' | 'reset' | 'resetPlayers';
 }
 
 export function AdminDialog({ 
@@ -38,12 +38,22 @@ export function AdminDialog({
   title,
   mode = 'add'
 }: AdminDialogProps) {
-  const [step, setStep] = useState<'password' | 'form'>(mode === 'reset' ? 'password' : 'form');
+  const [step, setStep] = useState<'password' | 'form'>(mode === 'reset' || mode === 'resetPlayers' ? 'password' : 'form');
   const [password, setPassword] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [courtName, setCourtName] = useState(initialName);
   const [modality, setModality] = useState(initialModality);
   const { toast } = useToast();
+  const auth = useAuth();
+  const { user } = useUser();
+
+  const verifyPassword = async (passwordToCheck: string) => {
+    if (!auth || !user?.email || !auth.currentUser) {
+      throw new Error('Usuário não autenticado.');
+    }
+    const credential = EmailAuthProvider.credential(user.email, passwordToCheck);
+    await reauthenticateWithCredential(auth.currentUser, credential);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -51,18 +61,20 @@ export function AdminDialog({
       setModality(initialModality);
       setPassword('');
       setAdminPassword('');
-      setStep(mode === 'reset' ? 'password' : 'form');
+      setStep(mode === 'reset' || mode === 'resetPlayers' ? 'password' : 'form');
     }
   }, [isOpen, initialName, initialModality, mode]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (mode === 'reset') {
-      if (password !== ADMIN_PASSWORD) {
+    if (mode === 'reset' || mode === 'resetPlayers') {
+      try {
+        await verifyPassword(password);
+      } catch (error: any) {
         toast({
           title: "SENHA INCORRETA",
-          description: "A SENHA DE ADMINISTRADOR ESTÁ ERRADA.",
+          description: "A SENHA de login está errada.",
           variant: "destructive",
         });
         setPassword('');
@@ -76,10 +88,12 @@ export function AdminDialog({
       return;
     }
 
-    if (adminPassword !== ADMIN_PASSWORD) {
+    try {
+      await verifyPassword(adminPassword);
+    } catch (error: any) {
       toast({
         title: "SENHA INCORRETA",
-        description: "A SENHA DE ADMINISTRADOR ESTÁ ERRADA.",
+        description: "A SENHA de login está errada.",
         variant: "destructive",
       });
       setAdminPassword('');
@@ -111,7 +125,7 @@ export function AdminDialog({
           <form onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle className="text-orange-500 font-headline uppercase italic flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5" /> {mode === 'reset' ? 'RESET GERAL - CONFIRMAÇÃO' : `${title.toUpperCase()} - ADMIN`}
+                <ShieldCheck className="w-5 h-5" /> {mode === 'reset' ? 'RESET - CONFIRMAÇÃO' : mode === 'resetPlayers' ? 'RESET JOGADORES - CONFIRMAÇÃO' : `${title.toUpperCase()} - ADMIN`}
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">

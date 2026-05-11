@@ -13,9 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Shield, LayoutGrid } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-// Altere a senha de administrador aqui
-const ADMIN_PASSWORD = '1234';
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { useAuth } from '@/firebase/provider';
+import { useUser } from '@/firebase/auth/use-user';
 
 interface AddCourtDialogProps {
   isOpen: boolean;
@@ -29,13 +29,24 @@ export function AddCourtDialog({ isOpen, onClose, onAdd }: AddCourtDialogProps) 
   const [name, setName] = useState('');
   const [modality, setModality] = useState('Futevôlei');
   const { toast } = useToast();
+  const auth = useAuth();
+  const { user } = useUser();
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const verifyPassword = async (passwordToCheck: string) => {
+    if (!auth || !user?.email || !auth.currentUser) {
+      throw new Error('Usuário não autenticado.');
+    }
+    const credential = EmailAuthProvider.credential(user.email, passwordToCheck);
+    await reauthenticateWithCredential(auth.currentUser, credential);
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
+    try {
+      await verifyPassword(password);
       setStep('form');
       setPassword('');
-    } else {
+    } catch (error: any) {
       toast({
         title: "Senha Incorreta",
         description: "Você não tem permissão para adicionar quadras.",
