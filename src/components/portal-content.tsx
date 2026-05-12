@@ -282,21 +282,21 @@ export default function PortalReiDaQuadra() {
             <Button
               onClick={() => setShowChangePasswordDialog(true)}
               variant="ghost"
-              className="flex items-center gap-2 text-zinc-800 hover:text-blue-500 text-[9px] tracking-[0.5em] uppercase font-black transition-colors"
+              className="flex items-center gap-2 text-zinc-800 hover:bg-orange-500 hover:text-black text-[9px] tracking-[0.5em] uppercase font-black transition-colors"
             >
               <Settings className="w-3 h-3" /> ALTERAR SENHA
             </Button>
             <Button
               onClick={() => setAdminDialogMode('reset')}
               variant="ghost"
-              className="flex items-center gap-2 text-zinc-800 hover:text-red-500 text-[9px] tracking-[0.5em] uppercase font-black transition-colors"
+              className="flex items-center gap-2 text-zinc-800 hover:bg-orange-500 hover:text-black text-[9px] tracking-[0.5em] uppercase font-black transition-colors"
             >
               <Trash2 className="w-3 h-3" /> RESET GERAL
             </Button>
             <Button
               onClick={() => setAdminDialogMode('resetPlayers')}
               variant="ghost"
-              className="flex items-center gap-2 text-zinc-800 hover:text-orange-500 text-[9px] tracking-[0.5em] uppercase font-black transition-colors"
+              className="flex items-center gap-2 text-zinc-800 hover:bg-orange-500 hover:text-black text-[9px] tracking-[0.5em] uppercase font-black transition-colors"
             >
               <Trash2 className="w-3 h-3" /> RESET JOGADORES
             </Button>
